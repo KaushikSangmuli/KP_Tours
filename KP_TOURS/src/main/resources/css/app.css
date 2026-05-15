@@ -1,0 +1,70 @@
+.root {
+    -fx-padding: 15;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #dfe4ea;
+    -fx-min-width: 160;
+}
+
+.summary-title {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6b7280;
+}
+
+.summary-value {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.panel-container {
+    -fx-background-color: white;
+}
+
+.month-label {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.section-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.primary-button {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+}
+
+.success-button {
+    -fx-background-color: #16a34a;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+}
+
+.danger-button {
+    -fx-background-color: #dc2626;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+}
+
+.search-field {
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.table-view {
+    -fx-border-color: #e5e7eb;
+}
+
+.form-container {
+    -fx-background-color: white;
+}
+
+.form-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}

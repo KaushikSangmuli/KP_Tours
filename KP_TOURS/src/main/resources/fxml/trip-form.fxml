@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.geometry.Insets?>
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="KP_TOURS.ui.trip."
+      spacing="15"
+      prefWidth="500"
+      prefHeight="750"
+      styleClass="form-container">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Trip Form"
+           styleClass="form-title"/>
+
+    <DatePicker fx:id="tripDatePicker"
+                promptText="Trip Date"/>
+
+    <TextField fx:id="naamField"
+               promptText="Naam"/>
+
+    <TextField fx:id="sectorField"
+               promptText="Sector"/>
+
+    <TextField fx:id="airlineField"
+               promptText="Airline Name"/>
+
+    <TextField fx:id="sellAmountField"
+               promptText="Sell Amount"/>
+
+    <TextField fx:id="purchaseAmountField"
+               promptText="Purchase Amount"/>
+
+    <TextField fx:id="bookedByField"
+               promptText="Booked By"/>
+
+    <TextField fx:id="pnrField"
+               promptText="PNR Number"/>
+
+    <ComboBox fx:id="statusComboBox"
+              promptText="Select Status"/>
+
+    <HBox spacing="10">
+
+        <Button text="Upload Document"
+                fx:id="uploadButton"
+                onAction="#onUploadDocument"
+                styleClass="primary-button"/>
+
+        <Label fx:id="documentNameLabel"
+               text="No File Selected"/>
+
+    </HBox>
+
+    <HBox spacing="15">
+
+        <Button text="Save"
+                fx:id="saveButton"
+                onAction="#onSave"
+                styleClass="success-button"/>
+
+        <Button text="Cancel"
+                fx:id="cancelButton"
+                onAction="#onCancel"
+                styleClass="danger-button"/>
+
+    </HBox>
+
+</VBox>
