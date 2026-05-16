@@ -263,6 +263,7 @@
     -fx-padding: 18;
     -fx-min-width: 150;
     -fx-max-width: infinity;
+    -fx-cursor: hand;
 
     -fx-effect: dropshadow(
             gaussian,

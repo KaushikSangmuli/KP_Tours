@@ -710,6 +710,29 @@ public class DashboardView {
 
         card.getChildren().add(row);
 
+        // =====================================================
+        // CARD CLICK ACTIONS
+        // =====================================================
+
+        card.setOnMouseClicked(event -> {
+
+            switch (title.toLowerCase()) {
+
+                case "pending" ->
+                        loadTripsByStatus(
+                                TripStatus.PENDING
+                        );
+
+                case "cancelled" ->
+                        loadTripsByStatus(
+                                TripStatus.CANCELLED
+                        );
+
+                case "total trips" ->
+                        loadMonthlyTrips();
+            }
+        });
+
         return card;
     }
 
@@ -1173,6 +1196,59 @@ public class DashboardView {
         }
     }
 
+    private static void loadTripsByStatus(
+            TripStatus status
+    ) {
+
+        selectedDateLabel.setText(
+                status.name() + " Trips - "
+                        + currentMonth.getMonth().name().substring(0, 1)
+                        + currentMonth.getMonth().name().substring(1).toLowerCase()
+                        + " "
+                        + currentMonth.getYear()
+        );
+
+        tripTable.getItems().clear();
+
+        tripTable.getItems().addAll(
+                TripCacheManager.getTripCache()
+                        .stream()
+                        .filter(trip ->
+                                trip.getTripDate() != null
+                                        && trip.getTripDate().getMonth() == currentMonth.getMonth()
+                                        && trip.getTripDate().getYear() == currentMonth.getYear()
+                        )
+                        .filter(trip ->
+                                trip.getStatus() != null
+                                        && trip.getStatus() == status
+                        )
+                        .toList()
+        );
+    }
+
+    private static void loadMonthlyTrips() {
+
+        selectedDateLabel.setText(
+                "All Trips - "
+                        + currentMonth.getMonth().name().substring(0, 1)
+                        + currentMonth.getMonth().name().substring(1).toLowerCase()
+                        + " "
+                        + currentMonth.getYear()
+        );
+
+        tripTable.getItems().clear();
+
+        tripTable.getItems().addAll(
+                TripCacheManager.getTripCache()
+                        .stream()
+                        .filter(trip ->
+                                trip.getTripDate() != null
+                                        && trip.getTripDate().getMonth() == currentMonth.getMonth()
+                                        && trip.getTripDate().getYear() == currentMonth.getYear()
+                        )
+                        .toList()
+        );
+    }
     private static String safe(String value) {
 
         return value == null || value.isBlank()
