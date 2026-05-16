@@ -8,54 +8,43 @@ import KP_TOURS.model.TripStatus;
 import KP_TOURS.repository.TripDocumentRepository;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.util.LoggerUtil;
-import KP_TOURS.util.NotificationUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import javafx.scene.control.Alert;
 import javafx.stage.FileChooser;
 
-import java.io.File;
-import java.sql.Connection;
-import java.sql.Statement;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 public class BackupManager {
 
     private static final ObjectMapper objectMapper =
             new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
+    private static final DateTimeFormatter BACKUP_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+
+    private static final String BACKUP_JSON_NAME = "backup.json";
+    private static final String DOCUMENTS_FOLDER = "documents/";
+
+    // =========================================================
+    // CREATE BACKUP ZIP
+    // =========================================================
+
     public static void createBackup() {
 
         try {
 
-            TripRepository tripRepository =
-                    new TripRepository();
-
-            TripDocumentRepository documentRepository =
-                    new TripDocumentRepository();
-
-            List<Trip> trips =
-                    tripRepository.findAll();
-
-            List<TripDocument> documents =
-                    documentRepository.findAll();
-
-            BackupData backupData =
-                    new BackupData();
-
-            for (Trip trip : trips) {
-                backupData.getTrips().add(toTripBackupData(trip));
-            }
-
-            for (TripDocument document : documents) {
-                backupData.getDocuments().add(toDocumentBackupData(document));
-            }
-
             File backupDirectory =
-                    new File(
-                            DBConnection.getBackupDirectory()
-                    );
+                    new File(DBConnection.getBackupDirectory());
 
             if (!backupDirectory.exists()) {
                 backupDirectory.mkdirs();
@@ -63,117 +52,395 @@ public class BackupManager {
 
             String fileName =
                     "prabal_backup_"
-                            + System.currentTimeMillis()
-                            + ".json";
+                            + LocalDateTime.now().format(BACKUP_TIME_FORMAT)
+                            + ".zip";
 
-            File file =
-                    new File(
-                            backupDirectory,
-                            fileName
-                    );
-            objectMapper.writeValue(file, backupData);
+            File backupZip =
+                    new File(backupDirectory, fileName);
+
+            createBackupZip(backupZip);
 
             alert("Backup created successfully");
 
         } catch (Exception e) {
 
             LoggerUtil.logError(e, "Failed while creating backup");
-
             alert("Failed to create backup");
         }
     }
 
-    public static void restoreBackup() {
+    public static void createAutoBackup() {
 
         try {
 
-            FileChooser chooser =
-                    new FileChooser();
-
             File backupDirectory =
-                    new File(
-                            DBConnection.getBackupDirectory()
-                    );
+                    new File(DBConnection.getBackupDirectory());
 
             if (!backupDirectory.exists()) {
                 backupDirectory.mkdirs();
             }
 
-            chooser.setInitialDirectory(
-                    backupDirectory
-            );
+            String fileName =
+                    "auto_backup_"
+                            + LocalDate.now()
+                            + "_"
+                            + LocalDateTime.now().format(BACKUP_TIME_FORMAT)
+                            + ".zip";
+
+            File backupZip =
+                    new File(backupDirectory, fileName);
+
+            createBackupZip(backupZip);
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(e, "Failed while creating auto backup");
+        }
+    }
+
+    private static void createBackupZip(File backupZip) throws Exception {
+
+        TripRepository tripRepository =
+                new TripRepository();
+
+        TripDocumentRepository documentRepository =
+                new TripDocumentRepository();
+
+        List<Trip> trips =
+                tripRepository.findAll();
+
+        List<TripDocument> documents =
+                documentRepository.findAll();
+
+        BackupData backupData =
+                new BackupData();
+
+        for (Trip trip : trips) {
+            backupData.getTrips().add(toTripBackupData(trip));
+        }
+
+        for (TripDocument document : documents) {
+            backupData.getDocuments().add(toDocumentBackupData(document));
+        }
+
+        try (ZipOutputStream zos =
+                     new ZipOutputStream(
+                             new FileOutputStream(backupZip)
+                     )) {
+
+            // backup.json
+            zos.putNextEntry(new ZipEntry(BACKUP_JSON_NAME));
+
+            byte[] jsonBytes =
+                    objectMapper.writeValueAsBytes(backupData);
+
+            zos.write(jsonBytes);
+
+            zos.closeEntry();
+
+            // documents/
+            for (TripDocument document : documents) {
+
+                if (document.getFilePath() == null
+                        || document.getFilePath().isBlank()) {
+                    continue;
+                }
+
+                File sourceFile =
+                        new File(document.getFilePath());
+
+                if (!sourceFile.exists()) {
+                    continue;
+                }
+
+                String zipDocumentName =
+                        DOCUMENTS_FOLDER
+                                + document.getUuid()
+                                + "_"
+                                + safeFileName(document.getFileName());
+
+                zos.putNextEntry(
+                        new ZipEntry(zipDocumentName)
+                );
+
+                Files.copy(
+                        sourceFile.toPath(),
+                        zos
+                );
+
+                zos.closeEntry();
+            }
+        }
+    }
+
+    // =========================================================
+    // RESTORE BACKUP ZIP - MERGE
+    // =========================================================
+
+    public static void restoreBackup() {
+
+        try {
+
+            File backupDirectory =
+                    new File(DBConnection.getBackupDirectory());
+
+            if (!backupDirectory.exists()) {
+                backupDirectory.mkdirs();
+            }
+
+            FileChooser chooser =
+                    new FileChooser();
 
             chooser.setTitle("Restore Backup");
+            chooser.setInitialDirectory(backupDirectory);
 
             chooser.getExtensionFilters().add(
                     new FileChooser.ExtensionFilter(
-                            "JSON Backup File",
-                            "*.json"
+                            "ZIP Backup File",
+                            "*.zip"
                     )
             );
 
-            File file =
+            File backupZip =
                     chooser.showOpenDialog(null);
 
-            if (file == null) {
+            if (backupZip == null) {
                 return;
             }
 
-            BackupData backupData =
-                    objectMapper.readValue(file, BackupData.class);
+            restoreFromZip(backupZip);
 
-            TripRepository tripRepository =
-                    new TripRepository();
-
-            TripDocumentRepository documentRepository =
-                    new TripDocumentRepository();
-
-            if (backupData.getTrips() != null) {
-
-                for (BackupData.TripBackupData tripBackupData
-                        : backupData.getTrips()) {
-
-                    Trip trip =
-                            toTrip(tripBackupData);
-
-                    if (tripRepository.exists(trip.getId())) {
-
-                        tripRepository.update(trip);
-
-                    } else {
-
-                        tripRepository.save(trip);
-                    }
-                }
-            }
-
-            if (backupData.getDocuments() != null) {
-
-                for (BackupData.DocumentBackupData documentBackupData
-                        : backupData.getDocuments()) {
-
-                    TripDocument document =
-                            toTripDocument(documentBackupData);
-
-                    if (!documentRepository.exists(document.getUuid())) {
-
-                        documentRepository.save(document);
-                    }
-                }
-            }
-
-            TripCacheManager.initialize(
-                    tripRepository.findAll()
-            );
-            NotificationUtil.showSuccess("Backup restored successfully");
+            alert("Backup restored successfully");
 
         } catch (Exception e) {
 
             LoggerUtil.logError(e, "Failed while restoring backup");
-
             alert("Failed to restore backup");
         }
     }
+
+    private static void restoreFromZip(File backupZip) throws Exception {
+
+        File tempRestoreDir =
+                new File(
+                        DBConnection.getBackupDirectory(),
+                        "temp_restore"
+                );
+
+        if (tempRestoreDir.exists()) {
+            deleteDirectory(tempRestoreDir);
+        }
+
+        tempRestoreDir.mkdirs();
+
+        unzip(backupZip, tempRestoreDir);
+
+        File backupJson =
+                new File(tempRestoreDir, BACKUP_JSON_NAME);
+
+        if (!backupJson.exists()) {
+            throw new IllegalStateException("backup.json not found in zip");
+        }
+
+        BackupData backupData =
+                objectMapper.readValue(
+                        backupJson,
+                        BackupData.class
+                );
+
+        TripRepository tripRepository =
+                new TripRepository();
+
+        TripDocumentRepository documentRepository =
+                new TripDocumentRepository();
+
+        // Trips merge
+        if (backupData.getTrips() != null) {
+
+            for (BackupData.TripBackupData tripBackupData
+                    : backupData.getTrips()) {
+
+                Trip trip =
+                        toTrip(tripBackupData);
+
+                if (tripRepository.exists(trip.getId())) {
+
+                    tripRepository.update(trip);
+
+                } else {
+
+                    tripRepository.save(trip);
+                }
+            }
+        }
+
+        // Documents merge
+        if (backupData.getDocuments() != null) {
+
+            File documentsDir =
+                    new File(tempRestoreDir, "documents");
+
+            File uploadsDir =
+                    new File(DBConnection.getUploadsDirectory());
+
+            if (!uploadsDir.exists()) {
+                uploadsDir.mkdirs();
+            }
+
+            for (BackupData.DocumentBackupData documentBackupData
+                    : backupData.getDocuments()) {
+
+                TripDocument document =
+                        toTripDocument(documentBackupData);
+
+                if (documentRepository.exists(document.getUuid())) {
+                    continue;
+                }
+
+                File restoredFile =
+                        findRestoredDocumentFile(
+                                documentsDir,
+                                document.getUuid()
+                        );
+
+                if (restoredFile != null && restoredFile.exists()) {
+
+                    File destination =
+                            new File(
+                                    uploadsDir,
+                                    restoredFile.getName()
+                            );
+
+                    Files.copy(
+                            restoredFile.toPath(),
+                            destination.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING
+                    );
+
+                    document.setFilePath(
+                            destination.getAbsolutePath()
+                    );
+
+                    document.setFileName(
+                            destination.getName()
+                    );
+                }
+
+                documentRepository.save(document);
+            }
+        }
+
+        TripCacheManager.initialize(
+                tripRepository.findAll()
+        );
+
+        deleteDirectory(tempRestoreDir);
+    }
+
+    // =========================================================
+    // ZIP HELPERS
+    // =========================================================
+
+    private static void unzip(
+            File zipFile,
+            File destinationDir
+    ) throws Exception {
+
+        try (ZipInputStream zis =
+                     new ZipInputStream(
+                             new FileInputStream(zipFile)
+                     )) {
+
+            ZipEntry entry;
+
+            while ((entry = zis.getNextEntry()) != null) {
+
+                File newFile =
+                        new File(
+                                destinationDir,
+                                entry.getName()
+                        );
+
+                if (entry.isDirectory()) {
+
+                    newFile.mkdirs();
+
+                } else {
+
+                    File parent =
+                            newFile.getParentFile();
+
+                    if (parent != null && !parent.exists()) {
+                        parent.mkdirs();
+                    }
+
+                    Files.copy(
+                            zis,
+                            newFile.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING
+                    );
+                }
+
+                zis.closeEntry();
+            }
+        }
+    }
+
+    private static File findRestoredDocumentFile(
+            File documentsDir,
+            String documentUuid
+    ) {
+
+        if (documentsDir == null
+                || !documentsDir.exists()
+                || documentUuid == null) {
+            return null;
+        }
+
+        File[] files =
+                documentsDir.listFiles();
+
+        if (files == null) {
+            return null;
+        }
+
+        for (File file : files) {
+
+            if (file.getName().startsWith(documentUuid + "_")) {
+                return file;
+            }
+        }
+
+        return null;
+    }
+
+    private static void deleteDirectory(File directory) {
+
+        if (directory == null || !directory.exists()) {
+            return;
+        }
+
+        File[] files =
+                directory.listFiles();
+
+        if (files != null) {
+
+            for (File file : files) {
+
+                if (file.isDirectory()) {
+                    deleteDirectory(file);
+                } else {
+                    file.delete();
+                }
+            }
+        }
+
+        directory.delete();
+    }
+
+    // =========================================================
+    // MAPPERS
+    // =========================================================
 
     private static BackupData.TripBackupData toTripBackupData(
             Trip trip
@@ -327,7 +594,6 @@ public class BackupManager {
         return document;
     }
 
-
     private static void setField(
             Object target,
             String fieldName,
@@ -335,18 +601,30 @@ public class BackupManager {
     ) throws Exception {
 
         var field =
-                target.getClass().getDeclaredField(fieldName);
+                target.getClass()
+                        .getDeclaredField(fieldName);
 
         field.setAccessible(true);
 
         field.set(target, value);
     }
 
+    private static String safeFileName(String fileName) {
+
+        if (fileName == null || fileName.isBlank()) {
+            return "document";
+        }
+
+        return fileName
+                .replaceAll("[\\\\/:*?\"<>|]", "_")
+                .replaceAll("\\s+", "_");
+    }
+
     private static void alert(String message) {
 
-        javafx.scene.control.Alert alert =
-                new javafx.scene.control.Alert(
-                        javafx.scene.control.Alert.AlertType.INFORMATION
+        Alert alert =
+                new Alert(
+                        Alert.AlertType.INFORMATION
                 );
 
         alert.setContentText(message);
