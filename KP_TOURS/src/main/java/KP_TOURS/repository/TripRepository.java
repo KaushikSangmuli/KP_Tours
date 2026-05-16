@@ -258,4 +258,134 @@ public class TripRepository {
 
         field.set(target, value);
     }
+
+//    ------- Transaction Methods -------------
+public boolean save(Connection conn, Trip trip) {
+
+    String sql =
+            "INSERT INTO trips (" +
+                    "id, " +
+                    "trip_date, " +
+                    "name, " +
+                    "sector, " +
+                    "airline_name, " +
+                    "sell_amount, " +
+                    "purchase_amount, " +
+                    "profit, " +
+                    "booked_by, " +
+                    "pnr_no, " +
+                    "status, " +
+                    "description, " +
+                    "created_at, " +
+                    "updated_at" +
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    try (PreparedStatement ps =
+                 conn.prepareStatement(sql)) {
+
+        ps.setString(1, trip.getId());
+        ps.setString(2, trip.getTripDate() != null ? trip.getTripDate().toString() : null);
+        ps.setString(3, trip.getName());
+        ps.setString(4, trip.getSector());
+        ps.setString(5, trip.getAirlineName());
+        ps.setDouble(6, trip.getSellAmount());
+        ps.setDouble(7, trip.getPurchaseAmount());
+        ps.setDouble(8, trip.getProfit());
+        ps.setString(9, trip.getBookedBy());
+        ps.setString(10, trip.getPnrNo());
+        ps.setString(11, trip.getStatus() != null ? trip.getStatus().name() : null);
+        ps.setString(12, trip.getDescription());
+        ps.setString(13, trip.getCreatedAt() != null ? trip.getCreatedAt().toString() : null);
+        ps.setString(14, trip.getUpdatedAt() != null ? trip.getUpdatedAt().toString() : null);
+
+        return ps.executeUpdate() > 0;
+
+    } catch (Exception e) {
+
+        LoggerUtil.logError(
+                e,
+                "Failed while saving trip"
+        );
+
+        throw new RuntimeException(e);
+    }
+}
+
+    public boolean update(Connection conn, Trip trip) {
+
+        String sql =
+                "UPDATE trips SET " +
+                        "trip_date = ?, " +
+                        "name = ?, " +
+                        "sector = ?, " +
+                        "airline_name = ?, " +
+                        "sell_amount = ?, " +
+                        "purchase_amount = ?, " +
+                        "profit = ?, " +
+                        "booked_by = ?, " +
+                        "pnr_no = ?, " +
+                        "status = ?, " +
+                        "description = ?, " +
+                        "updated_at = ? " +
+                        "WHERE id = ?";
+
+        try (PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
+
+            trip.touch();
+
+            ps.setString(1, trip.getTripDate() != null ? trip.getTripDate().toString() : null);
+            ps.setString(2, trip.getName());
+            ps.setString(3, trip.getSector());
+            ps.setString(4, trip.getAirlineName());
+            ps.setDouble(5, trip.getSellAmount());
+            ps.setDouble(6, trip.getPurchaseAmount());
+            ps.setDouble(7, trip.getProfit());
+            ps.setString(8, trip.getBookedBy());
+            ps.setString(9, trip.getPnrNo());
+            ps.setString(10, trip.getStatus() != null ? trip.getStatus().name() : null);
+            ps.setString(11, trip.getDescription());
+            ps.setString(12, trip.getUpdatedAt().toString());
+            ps.setString(13, trip.getId());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed while updating trip"
+            );
+
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public boolean exists(Connection conn, String tripId) {
+
+        String sql =
+                "SELECT COUNT(*) FROM trips WHERE id = ?";
+
+        try (PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
+
+            ps.setString(1, tripId);
+
+            ResultSet rs =
+                    ps.executeQuery();
+
+            return rs.next() && rs.getInt(1) > 0;
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed while checking trip existence"
+            );
+
+            throw new RuntimeException(e);
+        }
+    }
+
 }

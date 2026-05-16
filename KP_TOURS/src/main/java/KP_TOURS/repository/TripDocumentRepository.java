@@ -306,4 +306,112 @@ public class TripDocumentRepository {
 
         field.set(target, value);
     }
+
+
+    public boolean save(
+            Connection conn,
+            TripDocument document
+    ) {
+
+        String sql =
+                "INSERT INTO documents (" +
+                        "uuid, " +
+                        "trip_uuid, " +
+                        "file_name, " +
+                        "file_path, " +
+                        "created_at" +
+                        ") VALUES (?, ?, ?, ?, ?)";
+
+        try (PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
+
+            ps.setString(1, document.getUuid());
+
+            ps.setString(2, document.getTripUuid());
+
+            ps.setString(3, document.getFileName());
+
+            ps.setString(4, document.getFilePath());
+
+            ps.setString(
+                    5,
+                    document.getCreatedAt().toString()
+            );
+
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed while saving trip document"
+            );
+
+            return false;
+        }
+    }
+
+    public boolean updateFilePath(
+            Connection conn,
+            String uuid,
+            String fileName,
+            String filePath
+    ) {
+
+        String sql =
+                "UPDATE documents SET " +
+                        "file_name = ?, " +
+                        "file_path = ? " +
+                        "WHERE uuid = ?";
+
+        try (PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
+
+            ps.setString(1, fileName);
+
+            ps.setString(2, filePath);
+
+            ps.setString(3, uuid);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed while updating document file path"
+            );
+
+            return false;
+        }
+    }
+
+
+    public boolean exists(
+            Connection conn,
+            String uuid
+    ) {
+
+        String sql =
+                "SELECT COUNT(*) FROM documents WHERE uuid = ?";
+
+        try (PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
+
+            ps.setString(1, uuid);
+
+            ResultSet rs = ps.executeQuery();
+
+            return rs.next() && rs.getInt(1) > 0;
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed while checking document existence"
+            );
+
+            return false;
+        }
+    }
 }

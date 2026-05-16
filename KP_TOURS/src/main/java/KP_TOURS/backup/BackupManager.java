@@ -16,6 +16,7 @@ import javafx.stage.FileChooser;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -219,6 +220,7 @@ public class BackupManager {
         }
     }
 
+
     private static void restoreFromZip(File backupZip) throws Exception {
 
         File tempRestoreDir =
@@ -233,121 +235,243 @@ public class BackupManager {
 
         tempRestoreDir.mkdirs();
 
-        unzip(backupZip, tempRestoreDir);
+        Connection conn = null;
 
-        File backupJson =
-                new File(tempRestoreDir, BACKUP_JSON_NAME);
+        try {
 
-        if (!backupJson.exists()) {
-            throw new IllegalStateException("backup.json not found in zip");
-        }
+            unzip(backupZip, tempRestoreDir);
 
-        BackupData backupData =
-                objectMapper.readValue(
-                        backupJson,
-                        BackupData.class
+            File backupJson =
+                    new File(tempRestoreDir, BACKUP_JSON_NAME);
+
+            if (!backupJson.exists()) {
+                throw new IllegalStateException("backup.json not found in zip");
+            }
+
+            BackupData backupData =
+                    objectMapper.readValue(
+                            backupJson,
+                            BackupData.class
+                    );
+
+            TripRepository tripRepository =
+                    new TripRepository();
+
+            TripDocumentRepository documentRepository =
+                    new TripDocumentRepository();
+
+            // =====================================================
+            // START TRANSACTION
+            // =====================================================
+
+            conn = DBConnection.getConnection();
+
+            if (conn == null) {
+                throw new IllegalStateException(
+                        "Failed to establish database connection"
                 );
+            }
 
-        TripRepository tripRepository =
-                new TripRepository();
+            conn.setAutoCommit(false);
 
-        TripDocumentRepository documentRepository =
-                new TripDocumentRepository();
+            // =====================================================
+            // Trips merge
+            // =====================================================
 
-        // Trips merge
-        if (backupData.getTrips() != null) {
+            if (backupData.getTrips() != null) {
 
-            for (BackupData.TripBackupData tripBackupData
-                    : backupData.getTrips()) {
+                for (BackupData.TripBackupData tripBackupData
+                        : backupData.getTrips()) {
 
-                Trip trip =
-                        toTrip(tripBackupData);
+                    Trip trip =
+                            toTrip(tripBackupData);
 
-                if (tripRepository.exists(trip.getId())) {
+                    boolean success;
 
-                    tripRepository.update(trip);
+                    if (tripRepository.exists(
+                            conn,
+                            trip.getId()
+                    )) {
 
-                } else {
+                        success =
+                                tripRepository.update(
+                                        conn,
+                                        trip
+                                );
 
-                    tripRepository.save(trip);
+                    } else {
+
+                        success =
+                                tripRepository.save(
+                                        conn,
+                                        trip
+                                );
+                    }
+
+                    if (!success) {
+
+                        throw new RuntimeException(
+                                "Failed to restore trip: "
+                                        + trip.getId()
+                        );
+                    }
                 }
             }
-        }
 
-        // Documents merge
-        if (backupData.getDocuments() != null) {
+            // =====================================================
+            // Documents merge
+            // =====================================================
 
-            File documentsDir =
-                    new File(tempRestoreDir, "documents");
+            if (backupData.getDocuments() != null) {
 
-            File uploadsDir =
-                    new File(DBConnection.getUploadsDirectory());
+                File documentsDir =
+                        new File(tempRestoreDir, "documents");
 
-            if (!uploadsDir.exists()) {
-                uploadsDir.mkdirs();
-            }
+                File uploadsDir =
+                        new File(DBConnection.getUploadsDirectory());
 
-            for (BackupData.DocumentBackupData documentBackupData
-                    : backupData.getDocuments()) {
+                if (!uploadsDir.exists()) {
+                    uploadsDir.mkdirs();
+                }
 
-                TripDocument document =
-                        toTripDocument(documentBackupData);
+                for (BackupData.DocumentBackupData documentBackupData
+                        : backupData.getDocuments()) {
 
-                boolean documentExists =
-                        documentRepository.exists(
-                                document.getUuid()
-                        );
+                    TripDocument document =
+                            toTripDocument(documentBackupData);
 
-                File restoredFile =
-                        findRestoredDocumentFile(
-                                documentsDir,
-                                document.getUuid()
-                        );
-
-                if (restoredFile != null && restoredFile.exists()) {
-
-                    File destination =
-                            new File(
-                                    uploadsDir,
-                                    restoredFile.getName()
+                    boolean documentExists =
+                            documentRepository.exists(
+                                    conn,
+                                    document.getUuid()
                             );
 
-                    Files.copy(
-                            restoredFile.toPath(),
-                            destination.toPath(),
-                            StandardCopyOption.REPLACE_EXISTING
-                    );
+                    File restoredFile =
+                            findRestoredDocumentFile(
+                                    documentsDir,
+                                    document.getUuid()
+                            );
 
-                    document.setFilePath(
-                            destination.getAbsolutePath()
-                    );
+                    if (restoredFile != null
+                            && restoredFile.exists()) {
 
-                    document.setFileName(
-                            destination.getName()
-                    );
-                }
+                        File destination =
+                                new File(
+                                        uploadsDir,
+                                        restoredFile.getName()
+                                );
 
-                if (documentExists) {
+                        Files.copy(
+                                restoredFile.toPath(),
+                                destination.toPath(),
+                                StandardCopyOption.REPLACE_EXISTING
+                        );
 
-                    documentRepository.updateFilePath(
-                            document.getUuid(),
-                            document.getFileName(),
-                            document.getFilePath()
-                    );
+                        document.setFilePath(
+                                destination.getAbsolutePath()
+                        );
 
-                } else {
+                        document.setFileName(
+                                destination.getName()
+                        );
+                    }
 
-                    documentRepository.save(document);
+                    boolean success;
+
+                    if (documentExists) {
+
+                        success =
+                                documentRepository.updateFilePath(
+                                        conn,
+                                        document.getUuid(),
+                                        document.getFileName(),
+                                        document.getFilePath()
+                                );
+
+                    } else {
+
+                        success =
+                                documentRepository.save(
+                                        conn,
+                                        document
+                                );
+                    }
+
+                    if (!success) {
+
+                        throw new RuntimeException(
+                                "Failed to restore document: "
+                                        + document.getUuid()
+                        );
+                    }
                 }
             }
+
+            // =====================================================
+            // COMMIT
+            // =====================================================
+
+            conn.commit();
+
+            // =====================================================
+            // REFRESH CACHE
+            // =====================================================
+
+            TripCacheManager.initialize(
+                    tripRepository.findAll()
+            );
+
+        } catch (Exception e) {
+
+            // =====================================================
+            // ROLLBACK
+            // =====================================================
+
+            if (conn != null) {
+
+                try {
+
+                    conn.rollback();
+
+                } catch (Exception rollbackException) {
+
+                    LoggerUtil.logError(
+                            rollbackException,
+                            "Failed while rollback"
+                    );
+                }
+            }
+
+            throw e;
+
+        } finally {
+
+            // =====================================================
+            // CLEANUP
+            // =====================================================
+
+            if (conn != null) {
+
+                try {
+
+                    conn.setAutoCommit(true);
+                    conn.close();
+
+                } catch (Exception closeException) {
+
+                    LoggerUtil.logError(
+                            closeException,
+                            "Failed while closing connection"
+                    );
+                }
+            }
+
+            deleteDirectory(tempRestoreDir);
         }
-
-        TripCacheManager.initialize(
-                tripRepository.findAll()
-        );
-
-        deleteDirectory(tempRestoreDir);
     }
+
+
+
 
     // =========================================================
     // ZIP HELPERS

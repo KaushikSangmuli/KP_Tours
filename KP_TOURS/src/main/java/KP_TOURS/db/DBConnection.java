@@ -32,6 +32,7 @@ public class DBConnection {
             // Ensure app directory exists
             new File(APP_DIR).mkdirs();
 
+
             return DriverManager.getConnection(DB_URL);
 
         } catch (SQLException e) {
