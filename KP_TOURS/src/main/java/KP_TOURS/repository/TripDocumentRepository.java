@@ -57,7 +57,30 @@ public class TripDocumentRepository {
             return false;
         }
     }
+    public boolean exists(String uuid) {
 
+        String sql =
+                "SELECT COUNT(*) FROM documents WHERE uuid = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, uuid);
+
+            ResultSet rs = ps.executeQuery();
+
+            return rs.next() && rs.getInt(1) > 0;
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed while checking document existence"
+            );
+
+            return false;
+        }
+    }
     // =========================================================
     // FIND BY TRIP UUID
     // =========================================================

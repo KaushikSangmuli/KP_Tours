@@ -8,6 +8,7 @@ import KP_TOURS.model.TripStatus;
 import KP_TOURS.repository.TripDocumentRepository;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.util.LoggerUtil;
+import KP_TOURS.util.NotificationUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import javafx.stage.FileChooser;
@@ -51,29 +52,25 @@ public class BackupManager {
                 backupData.getDocuments().add(toDocumentBackupData(document));
             }
 
-            FileChooser chooser =
-                    new FileChooser();
+            File backupDirectory =
+                    new File(
+                            DBConnection.getBackupDirectory()
+                    );
 
-            chooser.setTitle("Save Backup");
-
-            chooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter(
-                            "JSON Backup File",
-                            "*.json"
-                    )
-            );
-
-            chooser.setInitialFileName(
-                    "prabal_backup_" + System.currentTimeMillis() + ".json"
-            );
-
-            File file =
-                    chooser.showSaveDialog(null);
-
-            if (file == null) {
-                return;
+            if (!backupDirectory.exists()) {
+                backupDirectory.mkdirs();
             }
 
+            String fileName =
+                    "prabal_backup_"
+                            + System.currentTimeMillis()
+                            + ".json";
+
+            File file =
+                    new File(
+                            backupDirectory,
+                            fileName
+                    );
             objectMapper.writeValue(file, backupData);
 
             alert("Backup created successfully");
@@ -92,6 +89,19 @@ public class BackupManager {
 
             FileChooser chooser =
                     new FileChooser();
+
+            File backupDirectory =
+                    new File(
+                            DBConnection.getBackupDirectory()
+                    );
+
+            if (!backupDirectory.exists()) {
+                backupDirectory.mkdirs();
+            }
+
+            chooser.setInitialDirectory(
+                    backupDirectory
+            );
 
             chooser.setTitle("Restore Backup");
 
@@ -112,8 +122,6 @@ public class BackupManager {
             BackupData backupData =
                     objectMapper.readValue(file, BackupData.class);
 
-            clearExistingData();
-
             TripRepository tripRepository =
                     new TripRepository();
 
@@ -128,7 +136,14 @@ public class BackupManager {
                     Trip trip =
                             toTrip(tripBackupData);
 
-                    tripRepository.save(trip);
+                    if (tripRepository.exists(trip.getId())) {
+
+                        tripRepository.update(trip);
+
+                    } else {
+
+                        tripRepository.save(trip);
+                    }
                 }
             }
 
@@ -140,15 +155,17 @@ public class BackupManager {
                     TripDocument document =
                             toTripDocument(documentBackupData);
 
-                    documentRepository.save(document);
+                    if (!documentRepository.exists(document.getUuid())) {
+
+                        documentRepository.save(document);
+                    }
                 }
             }
 
             TripCacheManager.initialize(
                     tripRepository.findAll()
             );
-
-            alert("Backup restored successfully");
+            NotificationUtil.showSuccess("Backup restored successfully");
 
         } catch (Exception e) {
 
@@ -310,19 +327,6 @@ public class BackupManager {
         return document;
     }
 
-    private static void clearExistingData() {
-
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement()) {
-
-            stmt.executeUpdate("DELETE FROM documents");
-            stmt.executeUpdate("DELETE FROM trips");
-
-        } catch (Exception e) {
-
-            LoggerUtil.logError(e, "Failed while clearing existing data");
-        }
-    }
 
     private static void setField(
             Object target,
