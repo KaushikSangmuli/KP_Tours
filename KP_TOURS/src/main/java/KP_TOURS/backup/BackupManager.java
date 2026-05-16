@@ -293,9 +293,10 @@ public class BackupManager {
                 TripDocument document =
                         toTripDocument(documentBackupData);
 
-                if (documentRepository.exists(document.getUuid())) {
-                    continue;
-                }
+                boolean documentExists =
+                        documentRepository.exists(
+                                document.getUuid()
+                        );
 
                 File restoredFile =
                         findRestoredDocumentFile(
@@ -326,7 +327,18 @@ public class BackupManager {
                     );
                 }
 
-                documentRepository.save(document);
+                if (documentExists) {
+
+                    documentRepository.updateFilePath(
+                            document.getUuid(),
+                            document.getFileName(),
+                            document.getFilePath()
+                    );
+
+                } else {
+
+                    documentRepository.save(document);
+                }
             }
         }
 

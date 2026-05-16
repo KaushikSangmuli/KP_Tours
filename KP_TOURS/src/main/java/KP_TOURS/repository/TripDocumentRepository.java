@@ -57,6 +57,37 @@ public class TripDocumentRepository {
             return false;
         }
     }
+    public boolean updateFilePath(
+            String uuid,
+            String fileName,
+            String filePath
+    ) {
+
+        String sql =
+                "UPDATE documents SET " +
+                        "file_name = ?, " +
+                        "file_path = ? " +
+                        "WHERE uuid = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, fileName);
+            ps.setString(2, filePath);
+            ps.setString(3, uuid);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed while updating document file path"
+            );
+
+            return false;
+        }
+    }
     public boolean exists(String uuid) {
 
         String sql =
