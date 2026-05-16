@@ -84,7 +84,7 @@ public class DashboardView {
 
         VBox titleBox = new VBox(2);
 
-        Label appTitle = new Label("Prabal APP");
+        Label appTitle = new Label("AK Technologies ");
         appTitle.getStyleClass().add("app-title");
 
         Label subtitle = new Label("Travel Desk Management");

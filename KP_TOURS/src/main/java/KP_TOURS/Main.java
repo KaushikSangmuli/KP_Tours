@@ -35,7 +35,7 @@ public class Main extends Application {
                         .toExternalForm()
         );
 
-        stage.setTitle("AK Technologies ");
+        stage.setTitle("Safar Ease ");
 
         stage.setScene(scene);
 
