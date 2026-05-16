@@ -24,10 +24,14 @@ public class TripFormDialog {
     // OPEN ADD FORM
     // =========================================================
 
-    public static void openAddDialog(Runnable refreshCallback) {
+    public static void openAddDialog(
+            LocalDate selectedDate,
+            Runnable refreshCallback
+    ) {
 
         openDialog(
                 null,
+                selectedDate,
                 refreshCallback
         );
     }
@@ -43,6 +47,7 @@ public class TripFormDialog {
 
         openDialog(
                 trip,
+                trip.getTripDate(),
                 refreshCallback
         );
     }
@@ -53,6 +58,7 @@ public class TripFormDialog {
 
     private static void openDialog(
             Trip existingTrip,
+            LocalDate defaultDate,
             Runnable refreshCallback
     ) {
 
@@ -75,13 +81,21 @@ public class TripFormDialog {
         root.setPadding(new Insets(20));
 
         // =====================================================
-        // FIELDS
+        // DATE
         // =====================================================
 
         DatePicker tripDate =
                 new DatePicker();
 
-        tripDate.setValue(LocalDate.now());
+        tripDate.setValue(
+                defaultDate == null
+                        ? LocalDate.now()
+                        : defaultDate
+        );
+
+        // =====================================================
+        // INPUTS
+        // =====================================================
 
         TextField naam =
                 input("Naam");
@@ -149,7 +163,7 @@ public class TripFormDialog {
         });
 
         // =====================================================
-        // PREFILL FOR EDIT
+        // PREFILL EDIT DATA
         // =====================================================
 
         if (existingTrip != null) {
@@ -195,9 +209,8 @@ public class TripFormDialog {
             );
 
             documentLabel.setText(
-                    existingTrip.getDocumentPath()
-                            == null
-                            ? "No File"
+                    existingTrip.getDocumentPath() == null
+                            ? "No File Attached"
                             : "Document Attached"
             );
         }
@@ -216,8 +229,31 @@ public class TripFormDialog {
 
             try {
 
-                TripRepository repository =
-                        new TripRepository();
+                // =============================================
+                // VALIDATION
+                // =============================================
+
+                if (naam.getText().trim().isEmpty()) {
+
+                    alert("Naam is required");
+                    return;
+                }
+
+                if (sector.getText().trim().isEmpty()) {
+
+                    alert("Sector is required");
+                    return;
+                }
+
+                if (status.getValue() == null) {
+
+                    alert("Please select status");
+                    return;
+                }
+
+                // =============================================
+                // CREATE / UPDATE TRIP
+                // =============================================
 
                 Trip trip =
                         existingTrip == null
@@ -229,15 +265,15 @@ public class TripFormDialog {
                 );
 
                 trip.setNaam(
-                        naam.getText()
+                        naam.getText().trim()
                 );
 
                 trip.setSector(
-                        sector.getText()
+                        sector.getText().trim()
                 );
 
                 trip.setAirlineName(
-                        airline.getText()
+                        airline.getText().trim()
                 );
 
                 trip.setSellAmount(
@@ -253,11 +289,11 @@ public class TripFormDialog {
                 );
 
                 trip.setBookedBy(
-                        bookedBy.getText()
+                        bookedBy.getText().trim()
                 );
 
                 trip.setPnrNo(
-                        pnr.getText()
+                        pnr.getText().trim()
                 );
 
                 trip.setStatus(
@@ -265,7 +301,7 @@ public class TripFormDialog {
                 );
 
                 // =============================================
-                // SAVE DOCUMENT
+                // DOCUMENT SAVE
                 // =============================================
 
                 if (selectedDocument[0] != null) {
@@ -281,8 +317,11 @@ public class TripFormDialog {
                 }
 
                 // =============================================
-                // DB
+                // DB OPERATIONS
                 // =============================================
+
+                TripRepository repository =
+                        new TripRepository();
 
                 if (existingTrip == null) {
 
@@ -298,7 +337,7 @@ public class TripFormDialog {
                 }
 
                 // =============================================
-                // REFRESH UI
+                // REFRESH CALLBACK
                 // =============================================
 
                 if (refreshCallback != null) {
@@ -312,16 +351,7 @@ public class TripFormDialog {
 
                 ex.printStackTrace();
 
-                Alert alert =
-                        new Alert(
-                                Alert.AlertType.ERROR
-                        );
-
-                alert.setContentText(
-                        "Failed to save trip"
-                );
-
-                alert.showAndWait();
+                alert("Failed to save trip");
             }
         });
 
@@ -341,7 +371,12 @@ public class TripFormDialog {
                 Pos.CENTER_RIGHT
         );
 
+        // =====================================================
+        // ROOT
+        // =====================================================
+
         root.getChildren().addAll(
+
                 new Label("Trip Date"),
                 tripDate,
 
@@ -363,7 +398,7 @@ public class TripFormDialog {
         Scene scene =
                 new Scene(
                         root,
-                        500,
+                        450,
                         700
                 );
 
@@ -396,5 +431,15 @@ public class TripFormDialog {
 
             return 0;
         }
+    }
+
+    private static void alert(String message) {
+
+        Alert alert =
+                new Alert(Alert.AlertType.INFORMATION);
+
+        alert.setContentText(message);
+
+        alert.showAndWait();
     }
 }

@@ -1,5 +1,6 @@
 package KP_TOURS.ui.dashboard;
 
+import KP_TOURS.backup.BackupManager;
 import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.model.Trip;
 import KP_TOURS.ui.trip.TripFormDialog;
@@ -45,6 +46,14 @@ public class DashboardView {
 
     private static LocalDate selectedDate =
             LocalDate.now();
+    private static final TextField localSearchField =
+            new TextField();
+
+    private static final TextField globalSearchField =
+            new TextField();
+
+    private static boolean globalSearchMode =
+            false;
 
     // =========================================================
     // HEADER LABELS
@@ -83,6 +92,7 @@ public class DashboardView {
 
         initializeTable();
         loadTripsForDate(selectedDate);
+        updateSummaryCards();
 
         return root;
     }
@@ -115,8 +125,26 @@ public class DashboardView {
         Button backupButton =
                 new Button("Backup");
 
+        backupButton.setOnAction(e -> {
+
+            BackupManager.createBackup();
+        });
+
         Button restoreButton =
                 new Button("Restore");
+
+        restoreButton.setOnAction(e -> {
+
+            BackupManager.restoreBackup();
+
+            // reload UI after restore
+
+            loadTripsForDate(selectedDate);
+
+            refreshCalendar();
+
+            updateSummaryCards();
+        });
 
         top.getChildren().addAll(
                 spacer,
@@ -124,7 +152,41 @@ public class DashboardView {
                 restoreButton
         );
 
-        wrapper.getChildren().add(top);
+        // =========================================
+// GLOBAL SEARCH
+// =========================================
+
+        globalSearchField.setPromptText(
+                "Search All Trips..."
+        );
+
+        globalSearchField.setPrefWidth(300);
+
+        globalSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
+
+            if (newVal == null || newVal.isBlank()) {
+
+                globalSearchMode = false;
+
+                loadTripsForDate(selectedDate);
+
+                return;
+            }
+
+            globalSearchMode = true;
+
+            searchGlobally(newVal);
+        });
+
+        HBox searchBarWrapper =
+                new HBox(globalSearchField);
+
+        searchBarWrapper.setAlignment(Pos.CENTER_RIGHT);
+
+        wrapper.getChildren().addAll(
+                top,
+                searchBarWrapper
+        );
 
         return wrapper;
     }
@@ -178,6 +240,7 @@ public class DashboardView {
                     currentMonth.minusMonths(1);
 
             refreshCalendar();
+            updateSummaryCards();
         });
 
         nextButton.setOnAction(e -> {
@@ -186,6 +249,7 @@ public class DashboardView {
                     currentMonth.plusMonths(1);
 
             refreshCalendar();
+            updateSummaryCards();
         });
 
         controls.getChildren().addAll(
@@ -248,24 +312,42 @@ public class DashboardView {
 
         addTripButton.setOnAction(e -> {
 
-            TripFormDialog.openAddDialog(() -> {
+            TripFormDialog.openAddDialog( selectedDate, () -> {
 
                 loadTripsForDate(selectedDate);
 
                 refreshCalendar();
+                updateSummaryCards();
             });
         });
 
-        TextField searchField =
-                new TextField();
+        // =========================================
+// LOCAL SEARCH
+// =========================================
 
-        searchField.setPromptText(
-                "Search trips..."
+        localSearchField.setPromptText(
+                "Search Selected Date Trips..."
         );
+
+        localSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
+
+            if (globalSearchMode) {
+                return;
+            }
+
+            if (newVal == null || newVal.isBlank()) {
+
+                loadTripsForDate(selectedDate);
+
+                return;
+            }
+
+            searchWithinSelectedDate(newVal);
+        });
 
         root.getChildren().addAll(
                 top,
-                searchField,
+                localSearchField,
                 tripTable
         );
 
@@ -358,10 +440,11 @@ public class DashboardView {
     // CALENDAR CELL
     // =========================================================
 
+
     private static VBox buildCalendarCell(LocalDate date) {
 
         VBox cell =
-                new VBox(5);
+                new VBox(6);
 
         cell.setPadding(new Insets(8));
 
@@ -370,12 +453,65 @@ public class DashboardView {
         cell.getStyleClass()
                 .add("calendar-cell");
 
+        // =========================================
+        // DATE LABEL
+        // =========================================
+
         Label dateLabel =
                 new Label(
-                        String.valueOf(date.getDayOfMonth())
+                        String.valueOf(
+                                date.getDayOfMonth()
+                        )
                 );
 
-        cell.getChildren().add(dateLabel);
+        dateLabel.getStyleClass()
+                .add("calendar-date");
+
+        // =========================================
+        // TRIP COUNT
+        // =========================================
+
+        long tripCount =
+                TripCacheManager
+                        .getTripCache()
+                        .stream()
+                        .filter(trip ->
+
+                                trip.getTripDate() != null
+                                        &&
+
+                                        trip.getTripDate().equals(date)
+                        )
+                        .count();
+
+        Label tripCountLabel =
+                new Label();
+
+        if (tripCount > 0){
+            tripCountLabel.setText(
+                    tripCount + " Trips"
+            );
+        }
+
+        tripCountLabel.getStyleClass()
+                .add("trip-count-label");
+
+        // =========================================
+        // TODAY HIGHLIGHT
+        // =========================================
+
+        if (date.equals(LocalDate.now())) {
+
+            cell.setStyle(
+                    "-fx-border-color: #3b82f6;" +
+                            "-fx-border-width: 2;" +
+                            "-fx-border-radius: 8;"
+            );
+        }
+
+        // =========================================
+        // SELECT DATE
+        // =========================================
 
         cell.setOnMouseClicked(e -> {
 
@@ -388,6 +524,16 @@ public class DashboardView {
             loadTripsForDate(date);
         });
 
+        // =========================================
+        // ADD TO CELL
+        // =========================================
+
+        cell.getChildren().add(dateLabel);
+
+        if (tripCountLabel != null) {
+
+            cell.getChildren().add(tripCountLabel);
+        }
         return cell;
     }
 
@@ -506,6 +652,7 @@ public class DashboardView {
                                 loadTripsForDate(selectedDate);
 
                                 refreshCalendar();
+                                updateSummaryCards();
                             }
                     );
                 });
@@ -712,9 +859,90 @@ public class DashboardView {
         );
     }
 
+    private static void updateSummaryCards() {
+
+        var monthlyTrips =
+                TripCacheManager
+                        .getTripCache()
+                        .stream()
+                        .filter(trip ->
+
+                                trip.getTripDate() != null
+                                        &&
+
+                                        trip.getTripDate().getMonth()
+                                                == currentMonth.getMonth()
+
+                                        &&
+
+                                        trip.getTripDate().getYear()
+                                                == currentMonth.getYear()
+                        )
+                        .toList();
+
+        // =========================================
+        // TOTAL TRIPS
+        // =========================================
+
+        int totalTrips =
+                monthlyTrips.size();
+
+        // =========================================
+        // TOTAL SELL
+        // =========================================
+
+        double totalSell =
+                monthlyTrips.stream()
+                        .mapToDouble(Trip::getSellAmount)
+                        .sum();
+
+        // =========================================
+        // TOTAL PURCHASE
+        // =========================================
+
+        double totalPurchase =
+                monthlyTrips.stream()
+                        .mapToDouble(Trip::getPurchaseAmount)
+                        .sum();
+
+        // =========================================
+        // TOTAL PROFIT
+        // =========================================
+
+        double totalProfit =
+                monthlyTrips.stream()
+                        .mapToDouble(Trip::getProfit)
+                        .sum();
+
+        // =========================================
+        // UPDATE LABELS
+        // =========================================
+
+        totalTripsLabel.setText(
+                String.valueOf(totalTrips)
+        );
+
+        totalSellLabel.setText(
+                "₹ " + formatAmount(totalSell)
+        );
+
+        totalPurchaseLabel.setText(
+                "₹ " + formatAmount(totalPurchase)
+        );
+
+        totalProfitLabel.setText(
+                "₹ " + formatAmount(totalProfit)
+        );
+    }
+
+    private static String formatAmount(double value) {
+
+        return String.format("%,.2f", value);
+    }
     // =========================================================
     // COMPONENTS
     // =========================================================
+
 
     private static VBox summaryCard(
             String title,
@@ -756,6 +984,105 @@ public class DashboardView {
         return label;
     }
 
+    private static void searchWithinSelectedDate(String keyword) {
+
+        String search =
+                keyword.toLowerCase();
+
+        tripTable.getItems().clear();
+
+        tripTable.getItems().addAll(
+
+                TripCacheManager
+                        .getTripCache()
+                        .stream()
+
+                        .filter(trip ->
+
+                                trip.getTripDate() != null
+                                        &&
+
+                                        trip.getTripDate()
+                                                .equals(selectedDate)
+                        )
+
+                        .filter(trip -> matchesSearch(trip, search))
+
+                        .toList()
+        );
+    }
+
+    private static void searchGlobally(String keyword) {
+
+        String search =
+                keyword.toLowerCase();
+
+        tripTable.getItems().clear();
+
+        tripTable.getItems().addAll(
+
+                TripCacheManager
+                        .getTripCache()
+                        .stream()
+
+                        .filter(trip ->
+                                matchesSearch(trip, search)
+                        )
+
+                        .toList()
+        );
+    }
+
+    private static boolean matchesSearch(
+            Trip trip,
+            String search
+    ) {
+
+        return contains(
+                trip.getNaam(),
+                search
+        )
+
+                ||
+
+                contains(
+                        trip.getSector(),
+                        search
+                )
+
+                ||
+
+                contains(
+                        trip.getAirlineName(),
+                        search
+                )
+
+                ||
+
+                contains(
+                        trip.getPnrNo(),
+                        search
+                )
+
+                ||
+
+                contains(
+                        trip.getStatus().name(),
+                        search
+                );
+    }
+
+    private static boolean contains(
+            String value,
+            String search
+    ) {
+
+        return value != null
+                &&
+                value.toLowerCase()
+                        .contains(search);
+    }
+
     private static void alert(String message) {
 
         Alert alert =
@@ -765,4 +1092,6 @@ public class DashboardView {
 
         alert.showAndWait();
     }
+
+
 }
