@@ -1,6 +1,5 @@
 package KP_TOURS.model;
 
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,7 +10,7 @@ public class Trip {
 
     private LocalDate tripDate;
 
-    private String naam;
+    private String name;
     private String sector;
     private String airlineName;
 
@@ -24,7 +23,7 @@ public class Trip {
 
     private TripStatus status;
 
-    private String documentPath;
+    private String description;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -44,11 +43,15 @@ public class Trip {
     // =========================================================
 
     public void calculateProfit() {
-        this.profit = this.sellAmount - this.purchaseAmount;
+
+        this.profit =
+                this.sellAmount - this.purchaseAmount;
     }
 
     public void touch() {
-        this.updatedAt = LocalDateTime.now();
+
+        this.updatedAt =
+                LocalDateTime.now();
     }
 
     // =========================================================
@@ -67,12 +70,12 @@ public class Trip {
         this.tripDate = tripDate;
     }
 
-    public String getNaam() {
-        return naam;
+    public String getName() {
+        return name;
     }
 
-    public void setNaam(String naam) {
-        this.naam = naam;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getSector() {
@@ -96,7 +99,9 @@ public class Trip {
     }
 
     public void setSellAmount(double sellAmount) {
+
         this.sellAmount = sellAmount;
+
         calculateProfit();
     }
 
@@ -105,7 +110,9 @@ public class Trip {
     }
 
     public void setPurchaseAmount(double purchaseAmount) {
+
         this.purchaseAmount = purchaseAmount;
+
         calculateProfit();
     }
 
@@ -137,12 +144,13 @@ public class Trip {
         this.status = status;
     }
 
-    public String getDocumentPath() {
-        return documentPath;
+    public String getDescription() {
+        return description;
     }
 
-    public void setDocumentPath(String documentPath) {
-        this.documentPath = documentPath;
+    public void setDescription(String description) {
+
+        this.description = description;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -159,9 +167,10 @@ public class Trip {
 
     @Override
     public String toString() {
+
         return "Trip{" +
                 "id='" + id + '\'' +
-                ", naam='" + naam + '\'' +
+                ", name='" + name + '\'' +
                 ", sector='" + sector + '\'' +
                 ", airlineName='" + airlineName + '\'' +
                 ", tripDate=" + tripDate +

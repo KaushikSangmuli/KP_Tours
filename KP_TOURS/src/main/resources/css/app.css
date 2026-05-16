@@ -1,45 +1,309 @@
-.root{
+.dashboard-root {
     -fx-font-family: "Segoe UI";
-    -fx-background-color: #f5f7fb;
+    -fx-background-color: #eef4ff;
 }
 
-.summary-card{
+.premium-header {
+    -fx-padding: 28 34 24 34;
+    -fx-background-color: linear-gradient(to right, #111d8f, #243fd6);
+}
+.trip-form-scroll {
     -fx-background-color: white;
-    -fx-background-radius: 10;
-    -fx-padding: 15;
 }
 
-.summary-title{
-    -fx-text-fill: #777;
+.trip-form-scroll > .viewport {
+    -fx-background-color: white;
 }
 
-.summary-value{
-    -fx-font-size: 22px;
-    -fx-font-weight: bold;
+.premium-text-area {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 12;
+    -fx-padding: 10;
+    -fx-font-size: 13px;
 }
 
-.month-label{
-    -fx-font-size: 20px;
-    -fx-font-weight: bold;
+.premium-text-area:focused {
+    -fx-border-color: #2563eb;
 }
 
-.section-title{
+.app-logo {
+    -fx-font-size: 34px;
+    -fx-text-fill: white;
+}
+
+.app-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 800;
+    -fx-text-fill: white;
+}
+
+.app-subtitle {
+    -fx-font-size: 14px;
+    -fx-text-fill: #dbeafe;
+}
+
+.month-overview {
     -fx-font-size: 18px;
-    -fx-font-weight: bold;
+    -fx-font-weight: 800;
+    -fx-text-fill: white;
 }
 
-.calendar-cell{
-    -fx-background-color: white;
-    -fx-border-color: #e0e0e0;
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
-}
-
-.calendar-cell:hover{
-    -fx-background-color: #dbeafe;
+.header-button {
+    -fx-background-color: rgba(255,255,255,0.12);
+    -fx-border-color: rgba(255,255,255,0.28);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-text-fill: white;
+    -fx-font-weight: 700;
+    -fx-padding: 9 18;
     -fx-cursor: hand;
 }
 
-.calendar-header{
-    -fx-font-weight: bold;
+.header-button:hover {
+    -fx-background-color: rgba(255,255,255,0.22);
+}
+
+.main-content {
+    -fx-padding: 24 30 30 30;
+    -fx-background-color: #eef4ff;
+}
+
+.premium-panel {
+    -fx-background-color: white;
+    -fx-background-radius: 14;
+    -fx-padding: 22;
+    -fx-effect: dropshadow(gaussian, rgba(15,23,42,0.14), 22, 0.12, 0, 8);
+}
+
+.section-title {
+    -fx-font-size: 23px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f172a;
+}
+
+.calendar-month-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f172a;
+    -fx-min-width: 230;
+    -fx-alignment: center;
+}
+
+.calendar-nav-button {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-font-size: 18px;
+    -fx-font-weight: 900;
+    -fx-padding: 7 16;
+    -fx-cursor: hand;
+}
+
+.calendar-nav-button:hover {
+    -fx-background-color: #dbeafe;
+}
+
+.calendar-grid {
+    -fx-background-color: #e2e8f0;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.calendar-header {
+    -fx-background-color: white;
+    -fx-font-weight: 800;
+    -fx-text-fill: #0f172a;
+    -fx-alignment: center;
+    -fx-border-color: #e2e8f0;
+}
+
+.calendar-cell {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #e2e8f0;
+    -fx-cursor: hand;
+}
+
+.calendar-cell:hover {
+    -fx-background-color: #dbeafe;
+}
+
+.calendar-selected {
+    -fx-background-color: #2563eb;
+}
+
+.calendar-selected .label {
+    -fx-text-fill: white;
+}
+
+.calendar-today {
+    -fx-border-color: #16a34a;
+    -fx-border-width: 2;
+}
+
+.calendar-date {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #0f172a;
+}
+
+.trip-dot {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #2563eb;
+}
+
+.calendar-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #64748b;
+}
+
+.premium-search {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 14;
+    -fx-font-size: 13px;
+}
+
+.primary-button {
+    -fx-background-color: #2563eb;
+    -fx-background-radius: 10;
+    -fx-text-fill: white;
+    -fx-font-weight: 800;
+    -fx-padding: 10 18;
+    -fx-cursor: hand;
+}
+
+.primary-button:hover {
+    -fx-background-color: #1d4ed8;
+}
+
+.premium-table {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 12;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #f1f5f9;
+}
+
+.table-view .column-header {
+    -fx-background-color: #f1f5f9;
+    -fx-border-color: #e2e8f0;
+    -fx-padding: 12;
+}
+
+.table-view .column-header .label {
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f172a;
+}
+
+.table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: #f1f5f9;
+    -fx-cell-size: 58px;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #f8fafc;
+}
+
+.table-cell {
+    -fx-alignment: center-left;
+    -fx-padding: 8 12;
+    -fx-font-size: 13px;
+    -fx-text-fill: #0f172a;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #dbeafe;
+}
+
+.table-row-cell:selected .table-cell {
+    -fx-text-fill: #0f172a;
+}
+
+.table-action-button {
+    -fx-background-color: white;
+    -fx-border-color: #2563eb;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+    -fx-text-fill: #2563eb;
+    -fx-font-weight: 700;
+    -fx-padding: 6 10;
+    -fx-cursor: hand;
+}
+
+.table-action-button:hover {
+    -fx-background-color: #dbeafe;
+}
+.trip-form-scroll {
+    -fx-background-color: white;
+}
+
+.trip-form-scroll > .viewport {
+    -fx-background-color: white;
+}
+
+.summary-grid {
+    -fx-padding: 4 0 0 0;
+}
+
+.summary-card {
+    -fx-background-color: white;
+    -fx-background-radius: 16;
+    -fx-padding: 18;
+    -fx-min-width: 150;
+    -fx-max-width: infinity;
+
+    -fx-effect: dropshadow(
+            gaussian,
+            rgba(15,23,42,0.14),
+            18,
+            0.15,
+            0,
+            5
+    );
+}
+
+.summary-card:hover {
+    -fx-translate-y: -2;
+}
+
+.summary-icon {
+    -fx-font-size: 22px;
+
+    -fx-min-width: 46;
+    -fx-min-height: 46;
+
+    -fx-alignment: center;
+
+    -fx-background-color: #2563eb;
+    -fx-background-radius: 100;
+
+    -fx-text-fill: white;
+}
+
+.summary-title {
+    -fx-font-size: 13px;
+    -fx-text-fill: #64748b;
+}
+
+.summary-value {
+    -fx-font-size: 24px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f172a;
+}
+
+.summary-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #94a3b8;
 }

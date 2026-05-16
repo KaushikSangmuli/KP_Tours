@@ -3,246 +3,347 @@ package KP_TOURS.backup;
 import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.db.DBConnection;
 import KP_TOURS.model.Trip;
+import KP_TOURS.model.TripDocument;
+import KP_TOURS.model.TripStatus;
+import KP_TOURS.repository.TripDocumentRepository;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.util.LoggerUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
-import javafx.scene.control.Alert;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import javafx.stage.FileChooser;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.sql.Connection;
+import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class BackupManager {
 
-    // =========================================================
-    // CREATE BACKUP
-    // =========================================================
+    private static final ObjectMapper objectMapper =
+            new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     public static void createBackup() {
 
         try {
 
-            File backupDir =
-                    new File(DBConnection.getBackupDirectory());
+            TripRepository tripRepository =
+                    new TripRepository();
 
-            if (!backupDir.exists()) {
-                backupDir.mkdirs();
-            }
+            TripDocumentRepository documentRepository =
+                    new TripDocumentRepository();
 
-            LocalDateTime now = LocalDateTime.now();
+            List<Trip> trips =
+                    tripRepository.findAll();
 
-            String fileName = String.format(
-                    "%02d_%02d_%d_%02d_%02d_%02d_backup.json",
-                    now.getDayOfMonth(),
-                    now.getMonthValue(),
-                    now.getYear(),
-                    now.getHour(),
-                    now.getMinute(),
-                    now.getSecond()
-            );
-
-            File backupFile =
-                    new File(backupDir, fileName);
+            List<TripDocument> documents =
+                    documentRepository.findAll();
 
             BackupData backupData =
-                    buildBackupData();
+                    new BackupData();
 
-            ObjectMapper mapper =
-                    new ObjectMapper();
-
-            mapper.registerModule(
-                    new JavaTimeModule()
-            );
-
-            try (FileWriter writer =
-                         new FileWriter(backupFile)) {
-
-                writer.write(
-                        mapper.writerWithDefaultPrettyPrinter()
-                                .writeValueAsString(backupData)
-                );
+            for (Trip trip : trips) {
+                backupData.getTrips().add(toTripBackupData(trip));
             }
 
-            showInfo(
-                    "Backup saved successfully:\n"
-                            + backupFile.getAbsolutePath()
-            );
-
-        } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while creating backup"
-            );
-
-            showError("Backup failed");
-        }
-    }
-
-    // =========================================================
-    // BUILD BACKUP DATA
-    // =========================================================
-
-    private static BackupData buildBackupData() {
-
-        BackupData data = new BackupData();
-
-        List<Trip> trips =
-                TripCacheManager.getTripCache();
-
-        data.setTrips(trips);
-
-        return data;
-    }
-
-    // =========================================================
-    // RESTORE BACKUP
-    // =========================================================
-
-    public static void restoreBackup() {
-
-        Connection conn = null;
-
-        try {
-
-            File backupDir =
-                    new File(DBConnection.getBackupDirectory());
-
-            if (!backupDir.exists()) {
-                backupDir.mkdirs();
+            for (TripDocument document : documents) {
+                backupData.getDocuments().add(toDocumentBackupData(document));
             }
 
             FileChooser chooser =
                     new FileChooser();
 
-            chooser.setTitle("Select Backup File");
+            chooser.setTitle("Save Backup");
 
             chooser.getExtensionFilters().add(
                     new FileChooser.ExtensionFilter(
-                            "JSON Files",
+                            "JSON Backup File",
                             "*.json"
                     )
             );
 
-            chooser.setInitialDirectory(backupDir);
+            chooser.setInitialFileName(
+                    "prabal_backup_" + System.currentTimeMillis() + ".json"
+            );
 
-            File selectedFile =
-                    chooser.showOpenDialog(null);
+            File file =
+                    chooser.showSaveDialog(null);
 
-            if (selectedFile == null) {
+            if (file == null) {
                 return;
             }
 
-            ObjectMapper mapper =
-                    new ObjectMapper();
+            objectMapper.writeValue(file, backupData);
 
-            mapper.registerModule(
-                    new JavaTimeModule()
-            );
-
-            BackupData data =
-                    mapper.readValue(
-                            selectedFile,
-                            BackupData.class
-                    );
-
-            conn = DBConnection.getConnection();
-
-            conn.setAutoCommit(false);
-
-            TripRepository repository =
-                    new TripRepository();
-
-            if (data.getTrips() != null) {
-
-                for (Trip trip : data.getTrips()) {
-
-                    if (!repository.exists(trip.getId())) {
-
-                        repository.save(trip);
-                    }
-                }
-            }
-
-            conn.commit();
-
-            // Reload Cache
-            TripCacheManager.initialize(
-                    repository.findAll()
-            );
-
-            showInfo(
-                    "Restore completed successfully"
-            );
+            alert("Backup created successfully");
 
         } catch (Exception e) {
 
-            try {
+            LoggerUtil.logError(e, "Failed while creating backup");
 
-                if (conn != null) {
-                    conn.rollback();
-                }
-
-            } catch (Exception rollbackException) {
-
-                LoggerUtil.logError(
-                        rollbackException,
-                        "Failed while rollback"
-                );
-            }
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while restoring backup"
-            );
-
-            showError("Restore failed");
-
-        } finally {
-
-            try {
-
-                if (conn != null) {
-                    conn.close();
-                }
-
-            } catch (Exception e) {
-
-                LoggerUtil.logError(
-                        e,
-                        "Failed while closing DB connection"
-                );
-            }
+            alert("Failed to create backup");
         }
     }
 
-    // =========================================================
-    // ALERTS
-    // =========================================================
+    public static void restoreBackup() {
 
-    private static void showInfo(String message) {
+        try {
 
-        Alert alert =
-                new Alert(Alert.AlertType.INFORMATION);
+            FileChooser chooser =
+                    new FileChooser();
 
-        alert.setHeaderText(null);
+            chooser.setTitle("Restore Backup");
 
-        alert.setContentText(message);
+            chooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter(
+                            "JSON Backup File",
+                            "*.json"
+                    )
+            );
 
-        alert.showAndWait();
+            File file =
+                    chooser.showOpenDialog(null);
+
+            if (file == null) {
+                return;
+            }
+
+            BackupData backupData =
+                    objectMapper.readValue(file, BackupData.class);
+
+            clearExistingData();
+
+            TripRepository tripRepository =
+                    new TripRepository();
+
+            TripDocumentRepository documentRepository =
+                    new TripDocumentRepository();
+
+            if (backupData.getTrips() != null) {
+
+                for (BackupData.TripBackupData tripBackupData
+                        : backupData.getTrips()) {
+
+                    Trip trip =
+                            toTrip(tripBackupData);
+
+                    tripRepository.save(trip);
+                }
+            }
+
+            if (backupData.getDocuments() != null) {
+
+                for (BackupData.DocumentBackupData documentBackupData
+                        : backupData.getDocuments()) {
+
+                    TripDocument document =
+                            toTripDocument(documentBackupData);
+
+                    documentRepository.save(document);
+                }
+            }
+
+            TripCacheManager.initialize(
+                    tripRepository.findAll()
+            );
+
+            alert("Backup restored successfully");
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(e, "Failed while restoring backup");
+
+            alert("Failed to restore backup");
+        }
     }
 
-    private static void showError(String message) {
+    private static BackupData.TripBackupData toTripBackupData(
+            Trip trip
+    ) {
 
-        Alert alert =
-                new Alert(Alert.AlertType.ERROR);
+        BackupData.TripBackupData data =
+                new BackupData.TripBackupData();
 
-        alert.setHeaderText(null);
+        data.setId(trip.getId());
+
+        data.setTripDate(
+                trip.getTripDate() == null
+                        ? null
+                        : trip.getTripDate().toString()
+        );
+
+        data.setName(trip.getName());
+        data.setSector(trip.getSector());
+        data.setAirlineName(trip.getAirlineName());
+        data.setSellAmount(trip.getSellAmount());
+        data.setPurchaseAmount(trip.getPurchaseAmount());
+        data.setProfit(trip.getProfit());
+        data.setBookedBy(trip.getBookedBy());
+        data.setPnrNo(trip.getPnrNo());
+
+        data.setStatus(
+                trip.getStatus() == null
+                        ? null
+                        : trip.getStatus().name()
+        );
+
+        data.setDescription(trip.getDescription());
+
+        data.setCreatedAt(
+                trip.getCreatedAt() == null
+                        ? null
+                        : trip.getCreatedAt().toString()
+        );
+
+        data.setUpdatedAt(
+                trip.getUpdatedAt() == null
+                        ? null
+                        : trip.getUpdatedAt().toString()
+        );
+
+        return data;
+    }
+
+    private static BackupData.DocumentBackupData toDocumentBackupData(
+            TripDocument document
+    ) {
+
+        BackupData.DocumentBackupData data =
+                new BackupData.DocumentBackupData();
+
+        data.setUuid(document.getUuid());
+        data.setTripUuid(document.getTripUuid());
+        data.setFileName(document.getFileName());
+        data.setFilePath(document.getFilePath());
+
+        data.setCreatedAt(
+                document.getCreatedAt() == null
+                        ? null
+                        : document.getCreatedAt().toString()
+        );
+
+        return data;
+    }
+
+    private static Trip toTrip(
+            BackupData.TripBackupData data
+    ) throws Exception {
+
+        Trip trip =
+                new Trip();
+
+        setField(trip, "id", data.getId());
+
+        if (data.getTripDate() != null
+                && !data.getTripDate().isBlank()) {
+
+            trip.setTripDate(
+                    LocalDate.parse(data.getTripDate())
+            );
+        }
+
+        trip.setName(data.getName());
+        trip.setSector(data.getSector());
+        trip.setAirlineName(data.getAirlineName());
+        trip.setSellAmount(data.getSellAmount());
+        trip.setPurchaseAmount(data.getPurchaseAmount());
+        trip.setBookedBy(data.getBookedBy());
+        trip.setPnrNo(data.getPnrNo());
+
+        if (data.getStatus() != null
+                && !data.getStatus().isBlank()) {
+
+            trip.setStatus(
+                    TripStatus.valueOf(data.getStatus())
+            );
+        }
+
+        trip.setDescription(data.getDescription());
+
+        if (data.getCreatedAt() != null
+                && !data.getCreatedAt().isBlank()) {
+
+            setField(
+                    trip,
+                    "createdAt",
+                    LocalDateTime.parse(data.getCreatedAt())
+            );
+        }
+
+        if (data.getUpdatedAt() != null
+                && !data.getUpdatedAt().isBlank()) {
+
+            setField(
+                    trip,
+                    "updatedAt",
+                    LocalDateTime.parse(data.getUpdatedAt())
+            );
+        }
+
+        return trip;
+    }
+
+    private static TripDocument toTripDocument(
+            BackupData.DocumentBackupData data
+    ) throws Exception {
+
+        TripDocument document =
+                new TripDocument();
+
+        setField(document, "uuid", data.getUuid());
+
+        document.setTripUuid(data.getTripUuid());
+        document.setFileName(data.getFileName());
+        document.setFilePath(data.getFilePath());
+
+        if (data.getCreatedAt() != null
+                && !data.getCreatedAt().isBlank()) {
+
+            setField(
+                    document,
+                    "createdAt",
+                    LocalDateTime.parse(data.getCreatedAt())
+            );
+        }
+
+        return document;
+    }
+
+    private static void clearExistingData() {
+
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            stmt.executeUpdate("DELETE FROM documents");
+            stmt.executeUpdate("DELETE FROM trips");
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(e, "Failed while clearing existing data");
+        }
+    }
+
+    private static void setField(
+            Object target,
+            String fieldName,
+            Object value
+    ) throws Exception {
+
+        var field =
+                target.getClass().getDeclaredField(fieldName);
+
+        field.setAccessible(true);
+
+        field.set(target, value);
+    }
+
+    private static void alert(String message) {
+
+        javafx.scene.control.Alert alert =
+                new javafx.scene.control.Alert(
+                        javafx.scene.control.Alert.AlertType.INFORMATION
+                );
 
         alert.setContentText(message);
 

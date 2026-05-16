@@ -13,7 +13,7 @@ public class ValidationUtil {
 
         return trip != null
                 && trip.getTripDate() != null
-                && isNotBlank(trip.getNaam())
+                && isNotBlank(trip.getName())
                 && isNotBlank(trip.getSector())
                 && isNotBlank(trip.getAirlineName());
     }

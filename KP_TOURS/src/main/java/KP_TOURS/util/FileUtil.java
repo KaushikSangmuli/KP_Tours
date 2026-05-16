@@ -1,61 +1,76 @@
 package KP_TOURS.util;
 
 import KP_TOURS.db.DBConnection;
+import KP_TOURS.model.Trip;
 
-import java.awt.Desktop;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class FileUtil {
 
-    // =========================================================
-    // SAVE UPLOADED FILE
-    // =========================================================
+    private static final DateTimeFormatter FILE_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
-    public static String saveDocument(File sourceFile) {
+    public static String saveDocument(
+            File sourceFile,
+            Trip trip
+    ) {
 
         try {
 
-            if (sourceFile == null || !sourceFile.exists()) {
+            if (sourceFile == null || trip == null) {
                 return null;
             }
 
-            File uploadsDir =
+            File uploadDir =
                     new File(DBConnection.getUploadsDirectory());
 
-            uploadsDir.mkdirs();
-
-            String originalFileName =
-                    sourceFile.getName();
-
-            String extension = "";
-
-            int dotIndex =
-                    originalFileName.lastIndexOf(".");
-
-            if (dotIndex >= 0) {
-
-                extension =
-                        originalFileName.substring(dotIndex);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
             }
 
-            String newFileName =
-                    UUID.randomUUID() + extension;
+            String originalName =
+                    sourceFile.getName();
 
-            Path targetPath =
-                    uploadsDir.toPath()
-                            .resolve(newFileName);
+            String extension =
+                    getExtension(originalName);
+
+            String baseName =
+                    removeExtension(originalName);
+
+            String customerName =
+                    sanitize(trip.getName());
+
+            String pnr =
+                    sanitize(trip.getPnrNo());
+
+            String timestamp =
+                    LocalDateTime.now().format(FILE_TIME_FORMAT);
+
+            String finalFileName =
+                    customerName
+                            + "_"
+                            + pnr
+                            + "_"
+                            + sanitize(baseName)
+                            + "_"
+                            + timestamp
+                            + extension;
+
+            Path destination =
+                    uploadDir.toPath().resolve(finalFileName);
 
             Files.copy(
                     sourceFile.toPath(),
-                    targetPath,
+                    destination,
                     StandardCopyOption.REPLACE_EXISTING
             );
 
-            return targetPath.toString();
+            return destination.toAbsolutePath().toString();
 
         } catch (Exception e) {
 
@@ -68,93 +83,39 @@ public class FileUtil {
         }
     }
 
-    // =========================================================
-    // OPEN FILE
-    // =========================================================
+    private static String sanitize(String value) {
 
-    public static void openFile(String filePath) {
-
-        try {
-
-            if (filePath == null || filePath.isBlank()) {
-                return;
-            }
-
-            File file = new File(filePath);
-
-            if (!file.exists()) {
-                return;
-            }
-
-            Desktop.getDesktop().open(file);
-
-        } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while opening file"
-            );
+        if (value == null || value.isBlank()) {
+            return "NA";
         }
+
+        return value
+                .trim()
+                .replaceAll("[^a-zA-Z0-9-_]", "_")
+                .replaceAll("_+", "_");
     }
 
-    // =========================================================
-    // DOWNLOAD FILE
-    // =========================================================
+    private static String getExtension(String fileName) {
 
-    public static boolean downloadFile(
-            String sourcePath,
-            File destination
-    ) {
+        int index =
+                fileName.lastIndexOf(".");
 
-        try {
-
-            if (sourcePath == null || destination == null) {
-                return false;
-            }
-
-            Files.copy(
-                    Path.of(sourcePath),
-                    destination.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING
-            );
-
-            return true;
-
-        } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while downloading file"
-            );
-
-            return false;
+        if (index == -1) {
+            return "";
         }
+
+        return fileName.substring(index);
     }
 
-    // =========================================================
-    // DELETE FILE
-    // =========================================================
+    private static String removeExtension(String fileName) {
 
-    public static boolean deleteFile(String filePath) {
+        int index =
+                fileName.lastIndexOf(".");
 
-        try {
-
-            if (filePath == null || filePath.isBlank()) {
-                return false;
-            }
-
-            return Files.deleteIfExists(
-                    Path.of(filePath)
-            );
-
-        } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while deleting file"
-            );
-
-            return false;
+        if (index == -1) {
+            return fileName;
         }
+
+        return fileName.substring(0, index);
     }
 }

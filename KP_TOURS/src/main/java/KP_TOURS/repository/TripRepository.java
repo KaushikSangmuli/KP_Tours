@@ -1,11 +1,9 @@
 package KP_TOURS.repository;
 
-
-import KP_TOURS.model.Trip;
 import KP_TOURS.db.DBConnection;
+import KP_TOURS.model.Trip;
 import KP_TOURS.model.TripStatus;
 import KP_TOURS.util.LoggerUtil;
-
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -18,17 +16,13 @@ import java.util.List;
 
 public class TripRepository {
 
-    // =========================================================
-    // INSERT
-    // =========================================================
-
     public boolean save(Trip trip) {
 
         String sql =
                 "INSERT INTO trips (" +
                         "id, " +
                         "trip_date, " +
-                        "naam, " +
+                        "name, " +
                         "sector, " +
                         "airline_name, " +
                         "sell_amount, " +
@@ -37,7 +31,7 @@ public class TripRepository {
                         "booked_by, " +
                         "pnr_no, " +
                         "status, " +
-                        "document_path, " +
+                        "description, " +
                         "created_at, " +
                         "updated_at" +
                         ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -46,64 +40,34 @@ public class TripRepository {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, trip.getId());
-
-            ps.setString(2,
-                    trip.getTripDate() != null
-                            ? trip.getTripDate().toString()
-                            : null);
-
-            ps.setString(3, trip.getNaam());
+            ps.setString(2, trip.getTripDate() != null ? trip.getTripDate().toString() : null);
+            ps.setString(3, trip.getName());
             ps.setString(4, trip.getSector());
             ps.setString(5, trip.getAirlineName());
-
             ps.setDouble(6, trip.getSellAmount());
             ps.setDouble(7, trip.getPurchaseAmount());
             ps.setDouble(8, trip.getProfit());
-
             ps.setString(9, trip.getBookedBy());
             ps.setString(10, trip.getPnrNo());
-
-            ps.setString(11,
-                    trip.getStatus() != null
-                            ? trip.getStatus().name()
-                            : null);
-
-            ps.setString(12, trip.getDocumentPath());
-
-            ps.setString(13,
-                    trip.getCreatedAt() != null
-                            ? trip.getCreatedAt().toString()
-                            : null);
-
-            ps.setString(14,
-                    trip.getUpdatedAt() != null
-                            ? trip.getUpdatedAt().toString()
-                            : null);
+            ps.setString(11, trip.getStatus() != null ? trip.getStatus().name() : null);
+            ps.setString(12, trip.getDescription());
+            ps.setString(13, trip.getCreatedAt() != null ? trip.getCreatedAt().toString() : null);
+            ps.setString(14, trip.getUpdatedAt() != null ? trip.getUpdatedAt().toString() : null);
 
             return ps.executeUpdate() > 0;
 
         } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while saving trip"
-            );
-
+            LoggerUtil.logError(e, "Failed while saving trip");
             return false;
         }
     }
-
-    // =========================================================
-    // UPDATE
-    // =========================================================
 
     public boolean update(Trip trip) {
 
         String sql =
                 "UPDATE trips SET " +
-
                         "trip_date = ?, " +
-                        "naam = ?, " +
+                        "name = ?, " +
                         "sector = ?, " +
                         "airline_name = ?, " +
                         "sell_amount = ?, " +
@@ -112,60 +76,36 @@ public class TripRepository {
                         "booked_by = ?, " +
                         "pnr_no = ?, " +
                         "status = ?, " +
-                        "document_path = ?, " +
+                        "description = ?, " +
                         "updated_at = ? " +
-
                         "WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1,
-                    trip.getTripDate() != null
-                            ? trip.getTripDate().toString()
-                            : null);
+            trip.touch();
 
-            ps.setString(2, trip.getNaam());
+            ps.setString(1, trip.getTripDate() != null ? trip.getTripDate().toString() : null);
+            ps.setString(2, trip.getName());
             ps.setString(3, trip.getSector());
             ps.setString(4, trip.getAirlineName());
-
             ps.setDouble(5, trip.getSellAmount());
             ps.setDouble(6, trip.getPurchaseAmount());
             ps.setDouble(7, trip.getProfit());
-
             ps.setString(8, trip.getBookedBy());
             ps.setString(9, trip.getPnrNo());
-
-            ps.setString(10,
-                    trip.getStatus() != null
-                            ? trip.getStatus().name()
-                            : null);
-
-            ps.setString(11, trip.getDocumentPath());
-
-            trip.touch();
-
-            ps.setString(12,
-                    trip.getUpdatedAt().toString());
-
+            ps.setString(10, trip.getStatus() != null ? trip.getStatus().name() : null);
+            ps.setString(11, trip.getDescription());
+            ps.setString(12, trip.getUpdatedAt().toString());
             ps.setString(13, trip.getId());
 
             return ps.executeUpdate() > 0;
 
         } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while updating trip"
-            );
-
+            LoggerUtil.logError(e, "Failed while updating trip");
             return false;
         }
     }
-
-    // =========================================================
-    // DELETE
-    // =========================================================
 
     public boolean delete(String tripId) {
 
@@ -175,23 +115,13 @@ public class TripRepository {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, tripId);
-
             return ps.executeUpdate() > 0;
 
         } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while deleting trip"
-            );
-
+            LoggerUtil.logError(e, "Failed while deleting trip");
             return false;
         }
     }
-
-    // =========================================================
-    // FIND ALL
-    // =========================================================
 
     public List<Trip> findAll() {
 
@@ -204,24 +134,15 @@ public class TripRepository {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-
                 trips.add(mapResultSetToTrip(rs));
             }
 
         } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while fetching trips"
-            );
+            LoggerUtil.logError(e, "Failed while fetching trips");
         }
 
         return trips;
     }
-
-    // =========================================================
-    // FIND BY ID
-    // =========================================================
 
     public Trip findById(String tripId) {
 
@@ -239,24 +160,15 @@ public class TripRepository {
             }
 
         } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while finding trip by id"
-            );
+            LoggerUtil.logError(e, "Failed while finding trip by id");
         }
 
         return null;
     }
 
-    // =========================================================
-    // EXISTS
-    // =========================================================
-
     public boolean exists(String tripId) {
 
-        String sql =
-                "SELECT COUNT(*) FROM trips WHERE id = ?";
+        String sql = "SELECT COUNT(*) FROM trips WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -268,19 +180,10 @@ public class TripRepository {
             return rs.next() && rs.getInt(1) > 0;
 
         } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while checking trip existence"
-            );
-
+            LoggerUtil.logError(e, "Failed while checking trip existence");
             return false;
         }
     }
-
-    // =========================================================
-    // COUNT
-    // =========================================================
 
     public int count() {
 
@@ -293,25 +196,15 @@ public class TripRepository {
             return rs.next() ? rs.getInt(1) : 0;
 
         } catch (Exception e) {
-
-            LoggerUtil.logError(
-                    e,
-                    "Failed while counting trips"
-            );
-
+            LoggerUtil.logError(e, "Failed while counting trips");
             return 0;
         }
     }
-
-    // =========================================================
-    // RESULTSET MAPPER
-    // =========================================================
 
     private Trip mapResultSetToTrip(ResultSet rs) throws Exception {
 
         Trip trip = new Trip();
 
-        // Reflection-like override of generated UUID
         setField(trip, "id", rs.getString("id"));
 
         String tripDate = rs.getString("trip_date");
@@ -320,7 +213,7 @@ public class TripRepository {
             trip.setTripDate(LocalDate.parse(tripDate));
         }
 
-        trip.setNaam(rs.getString("naam"));
+        trip.setName(rs.getString("name"));
         trip.setSector(rs.getString("sector"));
         trip.setAirlineName(rs.getString("airline_name"));
 
@@ -332,38 +225,26 @@ public class TripRepository {
 
         String status = rs.getString("status");
 
-        if (status != null) {
+        if (status != null && !status.isBlank()) {
             trip.setStatus(TripStatus.valueOf(status));
         }
 
-        trip.setDocumentPath(rs.getString("document_path"));
+        trip.setDescription(rs.getString("description"));
 
         String createdAt = rs.getString("created_at");
 
-        if (createdAt != null) {
-            setField(
-                    trip,
-                    "createdAt",
-                    LocalDateTime.parse(createdAt)
-            );
+        if (createdAt != null && !createdAt.isBlank()) {
+            setField(trip, "createdAt", LocalDateTime.parse(createdAt));
         }
 
         String updatedAt = rs.getString("updated_at");
 
-        if (updatedAt != null) {
-            setField(
-                    trip,
-                    "updatedAt",
-                    LocalDateTime.parse(updatedAt)
-            );
+        if (updatedAt != null && !updatedAt.isBlank()) {
+            setField(trip, "updatedAt", LocalDateTime.parse(updatedAt));
         }
 
         return trip;
     }
-
-    // =========================================================
-    // REFLECTION FIELD SETTER
-    // =========================================================
 
     private void setField(
             Object target,
@@ -371,8 +252,7 @@ public class TripRepository {
             Object value
     ) throws Exception {
 
-        var field =
-                target.getClass().getDeclaredField(fieldName);
+        var field = target.getClass().getDeclaredField(fieldName);
 
         field.setAccessible(true);
 

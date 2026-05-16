@@ -3,6 +3,10 @@ package KP_TOURS.ui.dashboard;
 import KP_TOURS.backup.BackupManager;
 import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.model.Trip;
+import KP_TOURS.model.TripDocument;
+import KP_TOURS.model.TripStatus;
+import KP_TOURS.repository.TripDocumentRepository;
+import KP_TOURS.repository.TripRepository;
 import KP_TOURS.ui.trip.TripFormDialog;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -10,86 +14,56 @@ import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
-import java.awt.*;
+import java.awt.Desktop;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
 
 public class DashboardView {
 
-    // =========================================================
-    // STATE
-    // =========================================================
+    private static final GridPane calendarGrid = new GridPane();
+    private static final TableView<Trip> tripTable = new TableView<>();
 
-    private static final GridPane calendarGrid =
-            new GridPane();
+    private static final Label monthLabel = new Label();
+    private static final Label monthOverviewLabel = new Label();
+    private static final Label selectedDateLabel = new Label();
 
-    private static final TableView<Trip> tripTable =
-            new TableView<>();
+    private static YearMonth currentMonth = YearMonth.now();
+    private static LocalDate selectedDate = LocalDate.now();
 
-    private static final Label monthLabel =
-            new Label();
+    private static final TextField localSearchField = new TextField();
+    private static final TextField globalSearchField = new TextField();
 
-    private static final Label selectedDateLabel =
-            new Label();
+    private static boolean globalSearchMode = false;
 
-    private static YearMonth currentMonth =
-            YearMonth.now();
-
-    private static LocalDate selectedDate =
-            LocalDate.now();
-    private static final TextField localSearchField =
-            new TextField();
-
-    private static final TextField globalSearchField =
-            new TextField();
-
-    private static boolean globalSearchMode =
-            false;
-
-    // =========================================================
-    // HEADER LABELS
-    // =========================================================
-
-    private static final Label totalTripsLabel =
-            summaryValue("0");
-
-    private static final Label totalSellLabel =
-            summaryValue("0");
-
-    private static final Label totalPurchaseLabel =
-            summaryValue("0");
-
-    private static final Label totalProfitLabel =
-            summaryValue("0");
-
-    // =========================================================
-    // MAIN VIEW
-    // =========================================================
+    private static final Label totalTripsLabel = summaryValue("0");
+    private static final Label totalSellLabel = summaryValue("₹ 0.00");
+    private static final Label totalPurchaseLabel = summaryValue("₹ 0.00");
+    private static final Label totalProfitLabel = summaryValue("₹ 0.00");
+    private static final Label pendingTripsLabel = summaryValue("0");
+    private static final Label cancelledTripsLabel = summaryValue("0");
 
     public static Parent getView() {
 
-        BorderPane root =
-                new BorderPane();
-
-        root.setPadding(new Insets(15));
-
-        root.setTop(buildHeader());
-
-        root.setCenter(buildCenter());
-
+        BorderPane root = new BorderPane();
         root.getStyleClass().add("dashboard-root");
 
-        refreshCalendar();
+        root.setTop(buildHeader());
+        root.setCenter(buildCenter());
 
+        refreshCalendar();
         initializeTable();
         loadTripsForDate(selectedDate);
         updateSummaryCards();
@@ -97,237 +71,252 @@ public class DashboardView {
         return root;
     }
 
-    // =========================================================
-    // HEADER
-    // =========================================================
-
     private static VBox buildHeader() {
 
-        VBox wrapper =
-                new VBox(15);
+        VBox wrapper = new VBox(22);
+        wrapper.getStyleClass().add("premium-header");
 
-        HBox top =
-                new HBox(15);
+        HBox titleRow = new HBox(18);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
 
-        top.setAlignment(Pos.CENTER_LEFT);
+        Label logo = new Label("✈");
+        logo.getStyleClass().add("app-logo");
 
-        top.getChildren().addAll(
-                summaryCard("Total Trips", totalTripsLabel),
-                summaryCard("Total Sell", totalSellLabel),
-                summaryCard("Total Purchase", totalPurchaseLabel),
-                summaryCard("Total Profit", totalProfitLabel)
-        );
+        VBox titleBox = new VBox(2);
+
+        Label appTitle = new Label("Prabal APP");
+        appTitle.getStyleClass().add("app-title");
+
+        Label subtitle = new Label("Travel Desk Management");
+        subtitle.getStyleClass().add("app-subtitle");
+
+        titleBox.getChildren().addAll(appTitle, subtitle);
 
         Region spacer = new Region();
-
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button backupButton =
-                new Button("Backup");
+        monthOverviewLabel.getStyleClass().add("month-overview");
 
-        backupButton.setOnAction(e -> {
-
-            BackupManager.createBackup();
-        });
-
-        Button restoreButton =
-                new Button("Restore");
-
-        restoreButton.setOnAction(e -> {
-
-            BackupManager.restoreBackup();
-
-            // reload UI after restore
-
-            loadTripsForDate(selectedDate);
-
+        Button prevButton = new Button("‹ Previous");
+        prevButton.getStyleClass().add("header-button");
+        prevButton.setOnAction(e -> {
+            currentMonth = currentMonth.minusMonths(1);
             refreshCalendar();
-
             updateSummaryCards();
         });
 
-        top.getChildren().addAll(
+        Button nextButton = new Button("Next ›");
+        nextButton.getStyleClass().add("header-button");
+        nextButton.setOnAction(e -> {
+            currentMonth = currentMonth.plusMonths(1);
+            refreshCalendar();
+            updateSummaryCards();
+        });
+
+        Button backupButton = new Button("Backup");
+        backupButton.getStyleClass().add("header-button");
+        backupButton.setOnAction(e -> BackupManager.createBackup());
+
+        Button restoreButton = new Button("Restore");
+        restoreButton.getStyleClass().add("header-button");
+        restoreButton.setOnAction(e -> {
+            BackupManager.restoreBackup();
+            loadTripsForDate(selectedDate);
+            refreshCalendar();
+            updateSummaryCards();
+        });
+
+        titleRow.getChildren().addAll(
+                logo,
+                titleBox,
                 spacer,
+                monthOverviewLabel,
+                prevButton,
+                nextButton,
                 backupButton,
                 restoreButton
         );
 
-        // =========================================
-// GLOBAL SEARCH
-// =========================================
+        GridPane cardGrid = new GridPane();
+        cardGrid.setHgap(16);
+        cardGrid.setVgap(16);
+        cardGrid.getStyleClass().add("summary-grid");
 
-        globalSearchField.setPromptText(
-                "Search All Trips..."
-        );
+        VBox card1 = summaryCard("💼", "Total Trips", totalTripsLabel);
+        VBox card2 = summaryCard("₹", "Total Sell", totalSellLabel);
+        VBox card3 = summaryCard("🛒", "Total Purchase", totalPurchaseLabel);
+        VBox card4 = summaryCard("📈", "Total Profit", totalProfitLabel);
+        VBox card5 = summaryCard("⏳", "Pending", pendingTripsLabel);
+        VBox card6 = summaryCard("✖", "Cancelled", cancelledTripsLabel);
 
-        globalSearchField.setPrefWidth(300);
+        VBox[] cards = {
+                card1,
+                card2,
+                card3,
+                card4,
+                card5,
+                card6
+        };
 
-        globalSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
+        Runnable refreshGrid = () -> {
 
-            if (newVal == null || newVal.isBlank()) {
+            cardGrid.getChildren().clear();
+            cardGrid.getColumnConstraints().clear();
 
-                globalSearchMode = false;
+            double width = wrapper.getWidth();
 
-                loadTripsForDate(selectedDate);
+            int columns;
 
-                return;
+            if (width < 750) {
+                columns = 2;
+            } else if (width < 1100) {
+                columns = 3;
+            } else {
+                columns = 6;
             }
 
-            globalSearchMode = true;
+            for (int i = 0; i < columns; i++) {
+                ColumnConstraints col = new ColumnConstraints();
+                col.setPercentWidth(100.0 / columns);
+                col.setHgrow(Priority.ALWAYS);
+                cardGrid.getColumnConstraints().add(col);
+            }
 
-            searchGlobally(newVal);
-        });
+            for (int i = 0; i < cards.length; i++) {
+                cardGrid.add(cards[i], i % columns, i / columns);
+            }
+        };
 
-        HBox searchBarWrapper =
-                new HBox(globalSearchField);
+        wrapper.widthProperty().addListener((obs, oldVal, newVal) -> refreshGrid.run());
 
-        searchBarWrapper.setAlignment(Pos.CENTER_RIGHT);
+        refreshGrid.run();
 
         wrapper.getChildren().addAll(
-                top,
-                searchBarWrapper
+                titleRow,
+                cardGrid
         );
 
         return wrapper;
     }
 
-    // =========================================================
-    // CENTER SECTION
-    // =========================================================
+    private static HBox buildCenter() {
 
-    private static SplitPane buildCenter() {
+        HBox center = new HBox(22);
+        center.getStyleClass().add("main-content");
 
-        SplitPane splitPane =
-                new SplitPane();
+        VBox calendarSection = buildCalendarSection();
+        VBox tripSection = buildTripSection();
 
-        splitPane.setDividerPositions(0.45);
+        HBox.setHgrow(tripSection, Priority.ALWAYS);
 
-        splitPane.getItems().addAll(
-                buildCalendarSection(),
-                buildTripSection()
+        center.getChildren().addAll(
+                calendarSection,
+                tripSection
         );
 
-        return splitPane;
+        return center;
     }
-
-    // =========================================================
-    // CALENDAR SECTION
-    // =========================================================
 
     private static VBox buildCalendarSection() {
 
-        VBox root =
-                new VBox(15);
+        VBox root = new VBox(18);
+        root.getStyleClass().add("premium-panel");
+        root.setPrefWidth(470);
 
-        root.setPadding(new Insets(15));
+        Label title = new Label("Calendar");
+        title.getStyleClass().add("section-title");
 
-        HBox controls =
-                new HBox(15);
-
+        HBox controls = new HBox(12);
         controls.setAlignment(Pos.CENTER);
 
-        Button prevButton =
-                new Button("◀ Previous");
-
-        Button nextButton =
-                new Button("Next ▶");
-
-        monthLabel.getStyleClass().add("month-label");
-
-        prevButton.setOnAction(e -> {
-
-            currentMonth =
-                    currentMonth.minusMonths(1);
-
+        Button prev = new Button("‹");
+        prev.getStyleClass().add("calendar-nav-button");
+        prev.setOnAction(e -> {
+            currentMonth = currentMonth.minusMonths(1);
             refreshCalendar();
             updateSummaryCards();
         });
 
-        nextButton.setOnAction(e -> {
+        monthLabel.getStyleClass().add("calendar-month-title");
 
-            currentMonth =
-                    currentMonth.plusMonths(1);
-
+        Button next = new Button("›");
+        next.getStyleClass().add("calendar-nav-button");
+        next.setOnAction(e -> {
+            currentMonth = currentMonth.plusMonths(1);
             refreshCalendar();
             updateSummaryCards();
         });
 
         controls.getChildren().addAll(
-                prevButton,
+                prev,
                 monthLabel,
-                nextButton
+                next
         );
 
-        calendarGrid.setHgap(8);
-        calendarGrid.setVgap(8);
+        calendarGrid.setHgap(0);
+        calendarGrid.setVgap(0);
+        calendarGrid.getStyleClass().add("calendar-grid");
+
+        Label hint = new Label("● Dots indicate number of trips on that day");
+        hint.getStyleClass().add("calendar-hint");
 
         root.getChildren().addAll(
+                title,
                 controls,
-                calendarGrid
-        );
-
-        VBox.setVgrow(
                 calendarGrid,
-                Priority.ALWAYS
+                hint
         );
 
         return root;
     }
 
-    // =========================================================
-    // TRIP SECTION
-    // =========================================================
-
     private static VBox buildTripSection() {
 
-        VBox root =
-                new VBox(15);
+        VBox root = new VBox(16);
+        root.getStyleClass().add("premium-panel");
 
-        root.setPadding(new Insets(15));
-
-        HBox top =
-                new HBox(15);
-
+        HBox top = new HBox(14);
         top.setAlignment(Pos.CENTER_LEFT);
 
-        selectedDateLabel.setText(
-                "Today's Trips"
-        );
-
-        selectedDateLabel.getStyleClass()
-                .add("section-title");
+        selectedDateLabel.getStyleClass().add("section-title");
 
         Region spacer = new Region();
-
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button addTripButton =
-                new Button("+ Add Trip");
+        globalSearchField.setPromptText("Search All Trips...");
+        globalSearchField.getStyleClass().add("premium-search");
+        globalSearchField.setPrefWidth(250);
+
+        globalSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
+
+            if (newVal == null || newVal.isBlank()) {
+                globalSearchMode = false;
+                loadTripsForDate(selectedDate);
+                return;
+            }
+
+            globalSearchMode = true;
+            searchGlobally(newVal);
+        });
+
+        Button addTripButton = new Button("+ Add Trip");
+        addTripButton.getStyleClass().add("primary-button");
+
+        addTripButton.setOnAction(e -> TripFormDialog.openAddDialog(selectedDate, () -> {
+            loadTripsForDate(selectedDate);
+            refreshCalendar();
+            updateSummaryCards();
+        }));
 
         top.getChildren().addAll(
                 selectedDateLabel,
                 spacer,
+                globalSearchField,
                 addTripButton
         );
 
-        addTripButton.setOnAction(e -> {
-
-            TripFormDialog.openAddDialog( selectedDate, () -> {
-
-                loadTripsForDate(selectedDate);
-
-                refreshCalendar();
-                updateSummaryCards();
-            });
-        });
-
-        // =========================================
-// LOCAL SEARCH
-// =========================================
-
-        localSearchField.setPromptText(
-                "Search Selected Date Trips..."
-        );
+        localSearchField.setPromptText("Search Selected Date Trips...");
+        localSearchField.getStyleClass().add("premium-search");
 
         localSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
 
@@ -336,14 +325,14 @@ public class DashboardView {
             }
 
             if (newVal == null || newVal.isBlank()) {
-
                 loadTripsForDate(selectedDate);
-
                 return;
             }
 
             searchWithinSelectedDate(newVal);
         });
+
+        tripTable.getStyleClass().add("premium-table");
 
         root.getChildren().addAll(
                 top,
@@ -351,292 +340,187 @@ public class DashboardView {
                 tripTable
         );
 
-        VBox.setVgrow(
-                tripTable,
-                Priority.ALWAYS
-        );
+        VBox.setVgrow(tripTable, Priority.ALWAYS);
 
         return root;
     }
-
-    // =========================================================
-    // CALENDAR RENDER
-    // =========================================================
 
     private static void refreshCalendar() {
 
         calendarGrid.getChildren().clear();
 
         monthLabel.setText(
-                currentMonth.getMonth().name()
+                currentMonth.getMonth().name().substring(0, 1)
+                        + currentMonth.getMonth().name().substring(1).toLowerCase()
                         + " "
                         + currentMonth.getYear()
         );
 
-        LocalDate firstDay =
-                currentMonth.atDay(1);
+        monthOverviewLabel.setText(monthLabel.getText() + " Overview");
 
-        int daysInMonth =
-                currentMonth.lengthOfMonth();
+        String[] weekDays = {
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat",
+                "Sun"
+        };
 
-        int startDay =
-                firstDay.getDayOfWeek().getValue();
+        for (int i = 0; i < weekDays.length; i++) {
+            Label dayLabel = new Label(weekDays[i]);
+            dayLabel.getStyleClass().add("calendar-header");
+            dayLabel.setPrefSize(62, 38);
+            calendarGrid.add(dayLabel, i, 0);
+        }
+
+        LocalDate firstDay = currentMonth.atDay(1);
+
+        int daysInMonth = currentMonth.lengthOfMonth();
+        int startDay = firstDay.getDayOfWeek().getValue();
 
         int row = 1;
         int col = startDay - 1;
 
-        // Week Headers
-
-        String[] weekDays = {
-                "Mon", "Tue", "Wed",
-                "Thu", "Fri", "Sat", "Sun"
-        };
-
-        for (int i = 0; i < weekDays.length; i++) {
-
-            Label dayLabel =
-                    new Label(weekDays[i]);
-
-            dayLabel.getStyleClass()
-                    .add("calendar-header");
-
-            dayLabel.setPrefWidth(70);
-
-            calendarGrid.add(
-                    dayLabel,
-                    i,
-                    0
-            );
-        }
-
-        // Dates
-
         for (int day = 1; day <= daysInMonth; day++) {
 
-            LocalDate date =
-                    currentMonth.atDay(day);
+            LocalDate date = currentMonth.atDay(day);
 
-            VBox cell =
-                    buildCalendarCell(date);
+            VBox cell = buildCalendarCell(date);
 
-            calendarGrid.add(
-                    cell,
-                    col,
-                    row
-            );
+            calendarGrid.add(cell, col, row);
 
             col++;
 
             if (col > 6) {
-
                 col = 0;
-
                 row++;
             }
         }
     }
 
-    // =========================================================
-    // CALENDAR CELL
-    // =========================================================
-
-
     private static VBox buildCalendarCell(LocalDate date) {
 
-        VBox cell =
-                new VBox(6);
+        VBox cell = new VBox(6);
 
+        cell.setAlignment(Pos.TOP_LEFT);
         cell.setPadding(new Insets(8));
+        cell.setPrefSize(62, 62);
 
-        cell.setPrefSize(90, 90);
+        cell.getStyleClass().add("calendar-cell");
 
-        cell.getStyleClass()
-                .add("calendar-cell");
+        if (date.equals(LocalDate.now())) {
+            cell.getStyleClass().add("calendar-today");
+        }
 
-        // =========================================
-        // DATE LABEL
-        // =========================================
+        if (date.equals(selectedDate)) {
+            cell.getStyleClass().add("calendar-selected");
+        }
 
-        Label dateLabel =
-                new Label(
-                        String.valueOf(
-                                date.getDayOfMonth()
-                        )
-                );
-
-        dateLabel.getStyleClass()
-                .add("calendar-date");
-
-        // =========================================
-        // TRIP COUNT
-        // =========================================
+        Label dateLabel = new Label(String.valueOf(date.getDayOfMonth()));
+        dateLabel.getStyleClass().add("calendar-date");
 
         long tripCount =
-                TripCacheManager
-                        .getTripCache()
+                TripCacheManager.getTripCache()
                         .stream()
                         .filter(trip ->
-
                                 trip.getTripDate() != null
-                                        &&
-
-                                        trip.getTripDate().equals(date)
+                                        && trip.getTripDate().equals(date)
                         )
                         .count();
 
-        Label tripCountLabel =
-                new Label();
+        Label countLabel = new Label();
 
-        if (tripCount > 0){
-            tripCountLabel.setText(
-                    tripCount + " Trips"
-            );
+        if (tripCount > 0) {
+            countLabel.setText("● " + tripCount);
+            countLabel.getStyleClass().add("trip-dot");
         }
-
-        tripCountLabel.getStyleClass()
-                .add("trip-count-label");
-
-        // =========================================
-        // TODAY HIGHLIGHT
-        // =========================================
-
-        if (date.equals(LocalDate.now())) {
-
-            cell.setStyle(
-                    "-fx-border-color: #3b82f6;" +
-                            "-fx-border-width: 2;" +
-                            "-fx-border-radius: 8;"
-            );
-        }
-
-        // =========================================
-        // SELECT DATE
-        // =========================================
-
-        cell.setOnMouseClicked(e -> {
-
-            selectedDate = date;
-
-            selectedDateLabel.setText(
-                    "Trips - " + date
-            );
-
-            loadTripsForDate(date);
-        });
-
-        // =========================================
-        // ADD TO CELL
-        // =========================================
 
         cell.getChildren().add(dateLabel);
 
-        if (tripCountLabel != null) {
-
-            cell.getChildren().add(tripCountLabel);
+        if (tripCount > 0) {
+            cell.getChildren().add(countLabel);
         }
+
+        cell.setOnMouseClicked(e -> {
+            selectedDate = date;
+            loadTripsForDate(date);
+            refreshCalendar();
+        });
+
         return cell;
     }
 
-    // =========================================================
-    // TABLE
-    // =========================================================
-
     private static void initializeTable() {
 
-        TableColumn<Trip, String> naam =
-                new TableColumn<>("Naam");
+        if (!tripTable.getColumns().isEmpty()) {
+            return;
+        }
 
-        naam.setCellValueFactory(cell ->
+        TableColumn<Trip, String> name = new TableColumn<>("Name");
+        name.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getName())
+        );
 
+        TableColumn<Trip, String> sector = new TableColumn<>("Sector");
+        sector.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getSector())
+        );
+
+        TableColumn<Trip, String> airline = new TableColumn<>("Airline");
+        airline.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getAirlineName())
+        );
+
+        TableColumn<Trip, String> pnr = new TableColumn<>("PNR");
+        pnr.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getPnrNo())
+        );
+
+        TableColumn<Trip, String> status = new TableColumn<>("Status");
+        status.setCellValueFactory(cell ->
                 new SimpleStringProperty(
-                        cell.getValue().getNaam()
+                        cell.getValue().getStatus() == null
+                                ? ""
+                                : cell.getValue().getStatus().name()
                 )
         );
 
-        TableColumn<Trip, String> sector =
-                new TableColumn<>("Sector");
+        TableColumn<Trip, Double> profit = new TableColumn<>("Profit");
+        profit.setCellValueFactory(cell ->
+                new SimpleObjectProperty<>(cell.getValue().getProfit())
+        );
 
+        TableColumn<Trip, Void> action = new TableColumn<>("Actions");
 
-
-        TableColumn<Trip, String> airline =
-                new TableColumn<>("Airline");
-
-        TableColumn<Trip, String> pnr =
-                new TableColumn<>("PNR");
-
-        TableColumn<Trip, String> status =
-                new TableColumn<>("Status");
-
-        TableColumn<Trip, Double> profit =
-                new TableColumn<>("Profit");
-
-        TableColumn<Trip, Void> action =
-                new TableColumn<>("Action");
-
-        TableColumn<Trip, Void> documentAction =
-                new TableColumn<>("Document");
-
-        naam.setPrefWidth(150);
-        sector.setPrefWidth(120);
+        name.setPrefWidth(150);
+        sector.setPrefWidth(130);
         airline.setPrefWidth(150);
         pnr.setPrefWidth(120);
-        status.setPrefWidth(100);
+        status.setPrefWidth(110);
         profit.setPrefWidth(100);
-        action.setPrefWidth(120);
-        documentAction.setPrefWidth(220);
-
-
-        naam.setCellValueFactory(cell ->
-
-                new SimpleStringProperty(
-                        cell.getValue().getNaam()
-                )
-        );
-
-
-        profit.setCellValueFactory(cell ->
-
-                new SimpleObjectProperty<>(
-                        cell.getValue()
-                                .getProfit()
-                )
-        );
-
-        status.setCellValueFactory(cell ->
-
-                new SimpleStringProperty(
-                        cell.getValue()
-                                .getStatus()
-                                .name()
-                )
-        );
-
-        pnr.setCellValueFactory(cell ->
-
-                new SimpleStringProperty(
-                        cell.getValue().getPnrNo()
-                )
-        );
-
-        airline.setCellValueFactory(cell ->
-
-                new SimpleStringProperty(
-                        cell.getValue().getAirlineName()
-                )
-        );
-        sector.setCellValueFactory(cell ->
-
-                new SimpleStringProperty(
-                        cell.getValue().getSector()
-                )
-        );
+        action.setPrefWidth(280);
 
         action.setCellFactory(param -> new TableCell<>() {
 
-            private final Button editButton =
-                    new Button("Edit");
+            private final Button editButton = new Button("Edit");
+            private final Button deleteButton = new Button("Delete");
+            private final Button viewButton = new Button("View");
+
+            private final HBox box = new HBox(
+                    8,
+                    editButton,
+                    deleteButton,
+                    viewButton
+            );
 
             {
+                box.setAlignment(Pos.CENTER_LEFT);
+
+                editButton.getStyleClass().add("table-action-button");
+                deleteButton.getStyleClass().add("table-action-button");
+                viewButton.getStyleClass().add("table-action-button");
 
                 editButton.setOnAction(event -> {
 
@@ -645,15 +529,437 @@ public class DashboardView {
                                     .getItems()
                                     .get(getIndex());
 
-                    TripFormDialog.openEditDialog(
-                            trip,
-                            () -> {
+                    TripFormDialog.openEditDialog(trip, () -> {
+                        loadTripsForDate(selectedDate);
+                        refreshCalendar();
+                        updateSummaryCards();
+                    });
+                });
 
-                                loadTripsForDate(selectedDate);
+                deleteButton.setOnAction(event -> {
 
-                                refreshCalendar();
-                                updateSummaryCards();
-                            }
+                    Trip trip =
+                            getTableView()
+                                    .getItems()
+                                    .get(getIndex());
+
+                    deleteTrip(trip);
+                });
+
+                viewButton.setOnAction(event -> {
+
+                    Trip trip =
+                            getTableView()
+                                    .getItems()
+                                    .get(getIndex());
+
+                    openDocumentListDialog(trip);
+                });
+            }
+
+            @Override
+            protected void updateItem(
+                    Void item,
+                    boolean empty
+            ) {
+
+                super.updateItem(item, empty);
+
+                setGraphic(empty ? null : box);
+            }
+        });
+
+        tripTable.getColumns().addAll(
+                name,
+                sector,
+                airline,
+                pnr,
+                status,
+                profit,
+                action
+        );
+
+        tripTable.setItems(
+                FXCollections.observableArrayList()
+        );
+    }
+
+    private static void loadTripsForDate(LocalDate date) {
+
+        selectedDateLabel.setText(
+                "Trips for "
+                        + date.format(
+                        DateTimeFormatter.ofPattern("dd MMM yyyy")
+                )
+        );
+
+        tripTable.getItems().clear();
+
+        tripTable.getItems().addAll(
+                TripCacheManager.getTripCache()
+                        .stream()
+                        .filter(trip ->
+                                trip.getTripDate() != null
+                                        && trip.getTripDate().equals(date)
+                        )
+                        .toList()
+        );
+    }
+
+    private static void updateSummaryCards() {
+
+        var monthlyTrips =
+                TripCacheManager.getTripCache()
+                        .stream()
+                        .filter(trip ->
+                                trip.getTripDate() != null
+                                        && trip.getTripDate().getMonth() == currentMonth.getMonth()
+                                        && trip.getTripDate().getYear() == currentMonth.getYear()
+                        )
+                        .toList();
+
+        totalTripsLabel.setText(
+                String.valueOf(monthlyTrips.size())
+        );
+
+        totalSellLabel.setText(
+                "₹ "
+                        + formatAmount(
+                        monthlyTrips.stream()
+                                .mapToDouble(Trip::getSellAmount)
+                                .sum()
+                )
+        );
+
+        totalPurchaseLabel.setText(
+                "₹ "
+                        + formatAmount(
+                        monthlyTrips.stream()
+                                .mapToDouble(Trip::getPurchaseAmount)
+                                .sum()
+                )
+        );
+
+        totalProfitLabel.setText(
+                "₹ "
+                        + formatAmount(
+                        monthlyTrips.stream()
+                                .mapToDouble(Trip::getProfit)
+                                .sum()
+                )
+        );
+
+        long pendingCount =
+                monthlyTrips.stream()
+                        .filter(trip ->
+                                trip.getStatus() != null
+                                        && trip.getStatus() == TripStatus.PENDING
+                        )
+                        .count();
+
+        long cancelledCount =
+                monthlyTrips.stream()
+                        .filter(trip ->
+                                trip.getStatus() != null
+                                        && trip.getStatus() == TripStatus.CANCELLED
+                        )
+                        .count();
+
+        pendingTripsLabel.setText(
+                String.valueOf(pendingCount)
+        );
+
+        cancelledTripsLabel.setText(
+                String.valueOf(cancelledCount)
+        );
+    }
+
+    private static VBox summaryCard(
+            String icon,
+            String title,
+            Label value
+    ) {
+
+        VBox card = new VBox(6);
+        card.getStyleClass().add("summary-card");
+
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        Label iconLabel = new Label(icon);
+        iconLabel.getStyleClass().add("summary-icon");
+
+        VBox textBox = new VBox(3);
+
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("summary-title");
+
+        Label monthText = new Label("This Month");
+        monthText.getStyleClass().add("summary-subtitle");
+
+        textBox.getChildren().addAll(
+                titleLabel,
+                value,
+                monthText
+        );
+
+        row.getChildren().addAll(
+                iconLabel,
+                textBox
+        );
+
+        card.getChildren().add(row);
+
+        return card;
+    }
+
+    private static Label summaryValue(String value) {
+
+        Label label = new Label(value);
+        label.getStyleClass().add("summary-value");
+
+        return label;
+    }
+
+    private static void searchWithinSelectedDate(String keyword) {
+
+        String search = keyword.toLowerCase();
+
+        tripTable.getItems().clear();
+
+        tripTable.getItems().addAll(
+                TripCacheManager.getTripCache()
+                        .stream()
+                        .filter(trip ->
+                                trip.getTripDate() != null
+                                        && trip.getTripDate().equals(selectedDate)
+                        )
+                        .filter(trip -> matchesSearch(trip, search))
+                        .toList()
+        );
+    }
+
+    private static void searchGlobally(String keyword) {
+
+        String search = keyword.toLowerCase();
+
+        tripTable.getItems().clear();
+
+        tripTable.getItems().addAll(
+                TripCacheManager.getTripCache()
+                        .stream()
+                        .filter(trip -> matchesSearch(trip, search))
+                        .toList()
+        );
+    }
+
+    private static boolean matchesSearch(
+            Trip trip,
+            String search
+    ) {
+
+        return contains(trip.getName(), search)
+                || contains(trip.getSector(), search)
+                || contains(trip.getAirlineName(), search)
+                || contains(trip.getPnrNo(), search)
+                || contains(trip.getBookedBy(), search)
+                || contains(
+                trip.getStatus() == null
+                        ? ""
+                        : trip.getStatus().name(),
+                search
+        );
+    }
+
+    private static boolean contains(
+            String value,
+            String search
+    ) {
+
+        return value != null
+                && value.toLowerCase().contains(search);
+    }
+
+    private static String formatAmount(double value) {
+
+        return String.format("%,.2f", value);
+    }
+
+    private static void deleteTrip(Trip trip) {
+
+        Alert confirm =
+                new Alert(Alert.AlertType.CONFIRMATION);
+
+        confirm.setTitle("Delete Trip");
+        confirm.setHeaderText("Are you sure you want to delete this trip?");
+        confirm.setContentText("This will delete the trip and all linked documents.");
+
+        Optional<ButtonType> result =
+                confirm.showAndWait();
+
+        if (result.isEmpty()
+                || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        try {
+
+            TripDocumentRepository documentRepository =
+                    new TripDocumentRepository();
+
+            List<TripDocument> documents =
+                    documentRepository.findByTripUuid(
+                            trip.getId()
+                    );
+
+            for (TripDocument document : documents) {
+
+                try {
+
+                    if (document.getFilePath() != null) {
+                        Files.deleteIfExists(
+                                new File(
+                                        document.getFilePath()
+                                ).toPath()
+                        );
+                    }
+
+                } catch (Exception ignored) {
+                }
+            }
+
+            documentRepository.deleteByTripUuid(
+                    trip.getId()
+            );
+
+            TripRepository tripRepository =
+                    new TripRepository();
+
+            boolean deleted =
+                    tripRepository.delete(
+                            trip.getId()
+                    );
+
+            if (deleted) {
+
+                TripCacheManager.removeTrip(
+                        trip.getId()
+                );
+
+                loadTripsForDate(selectedDate);
+                refreshCalendar();
+                updateSummaryCards();
+
+                alert("Trip deleted successfully");
+            }
+
+        } catch (Exception e) {
+
+            alert("Failed to delete trip");
+        }
+    }
+
+    private static void openDocumentListDialog(Trip trip) {
+
+        Stage stage = new Stage();
+
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Documents - " + trip.getName());
+
+        VBox root = new VBox(18);
+        root.setPadding(new Insets(24));
+        root.getStyleClass().add("trip-form-root");
+
+        Label title = new Label("Documents");
+        title.getStyleClass().add("trip-form-title");
+
+        Label subtitle =
+                new Label(
+                        "Trip: "
+                                + safe(trip.getName())
+                                + " | PNR: "
+                                + safe(trip.getPnrNo())
+                );
+
+        subtitle.getStyleClass().add("trip-form-subtitle");
+
+        TableView<TripDocument> documentTable =
+                new TableView<>();
+
+        documentTable.getStyleClass().add("premium-table");
+
+        TableColumn<TripDocument, String> fileNameColumn =
+                new TableColumn<>("File Name");
+
+        fileNameColumn.setCellValueFactory(cell ->
+                new SimpleStringProperty(
+                        cell.getValue().getFileName()
+                )
+        );
+
+        fileNameColumn.setPrefWidth(330);
+
+        TableColumn<TripDocument, Void> actionColumn =
+                new TableColumn<>("Actions");
+
+        actionColumn.setPrefWidth(260);
+
+        actionColumn.setCellFactory(param -> new TableCell<>() {
+
+            private final Button viewButton =
+                    new Button("View");
+
+            private final Button downloadButton =
+                    new Button("Download");
+
+            private final Button deleteButton =
+                    new Button("Delete");
+
+            private final HBox box =
+                    new HBox(
+                            8,
+                            viewButton,
+                            downloadButton,
+                            deleteButton
+                    );
+
+            {
+                box.setAlignment(Pos.CENTER_LEFT);
+
+                viewButton.getStyleClass().add("table-action-button");
+                downloadButton.getStyleClass().add("table-action-button");
+                deleteButton.getStyleClass().add("table-action-button");
+
+                viewButton.setOnAction(event -> {
+
+                    TripDocument document =
+                            getTableView()
+                                    .getItems()
+                                    .get(getIndex());
+
+                    viewDocument(document);
+                });
+
+                downloadButton.setOnAction(event -> {
+
+                    TripDocument document =
+                            getTableView()
+                                    .getItems()
+                                    .get(getIndex());
+
+                    downloadDocument(document);
+                });
+
+                deleteButton.setOnAction(event -> {
+
+                    TripDocument document =
+                            getTableView()
+                                    .getItems()
+                                    .get(getIndex());
+
+                    deleteDocument(
+                            document,
+                            documentTable
                     );
                 });
             }
@@ -666,432 +972,223 @@ public class DashboardView {
 
                 super.updateItem(item, empty);
 
-                if (empty) {
-
-                    setGraphic(null);
-
-                } else {
-
-                    setGraphic(editButton);
-                }
+                setGraphic(empty ? null : box);
             }
         });
 
-
-        documentAction.setCellFactory(param -> new TableCell<>() {
-
-            private final Button viewButton =
-                    new Button("View");
-
-            private final Button downloadButton =
-                    new Button("Download");
-
-            private final HBox container =
-                    new HBox(10, viewButton, downloadButton);
-
-            {
-
-                // =========================================
-                // VIEW
-                // =========================================
-
-                viewButton.setOnAction(event -> {
-
-                    try {
-
-                        Trip trip =
-                                getTableView()
-                                        .getItems()
-                                        .get(getIndex());
-
-                        if (trip.getDocumentPath() == null
-                                || trip.getDocumentPath().isBlank()) {
-
-                            alert("No document attached");
-
-                            return;
-                        }
-
-                        File file =
-                                new File(
-                                        trip.getDocumentPath()
-                                );
-
-                        if (!file.exists()) {
-
-                            alert("Document not found");
-
-                            return;
-                        }
-
-                        Desktop.getDesktop().open(file);
-
-                    } catch (Exception ex) {
-
-                        ex.printStackTrace();
-
-                        alert("Failed to open document");
-                    }
-                });
-
-                // =========================================
-                // DOWNLOAD
-                // =========================================
-
-                downloadButton.setOnAction(event -> {
-
-                    try {
-
-                        Trip trip =
-                                getTableView()
-                                        .getItems()
-                                        .get(getIndex());
-
-                        if (trip.getDocumentPath() == null
-                                || trip.getDocumentPath().isBlank()) {
-
-                            alert("No document attached");
-
-                            return;
-                        }
-
-                        File source =
-                                new File(
-                                        trip.getDocumentPath()
-                                );
-
-                        if (!source.exists()) {
-
-                            alert("Document not found");
-
-                            return;
-                        }
-
-                        javafx.stage.FileChooser chooser =
-                                new javafx.stage.FileChooser();
-
-                        chooser.setInitialFileName(
-                                source.getName()
-                        );
-
-                        File destination =
-                                chooser.showSaveDialog(null);
-
-                        if (destination == null) {
-
-                            return;
-                        }
-
-                        Files.copy(
-                                source.toPath(),
-                                destination.toPath(),
-                                StandardCopyOption.REPLACE_EXISTING
-                        );
-
-                        alert("Document downloaded successfully");
-
-                    } catch (Exception ex) {
-
-                        ex.printStackTrace();
-
-                        alert("Failed to download document");
-                    }
-                });
-            }
-
-            @Override
-            protected void updateItem(
-                    Void item,
-                    boolean empty
-            ) {
-
-                super.updateItem(item, empty);
-
-                if (empty) {
-
-                    setGraphic(null);
-
-                } else {
-
-                    setGraphic(container);
-                }
-            }
-        });
-
-        tripTable.getColumns().addAll(
-                naam,
-                sector,
-                airline,
-                pnr,
-                status,
-                profit,
-                action,
-                documentAction
+        documentTable.getColumns().addAll(
+                fileNameColumn,
+                actionColumn
         );
 
-        tripTable.setItems(
-                FXCollections.observableArrayList()
-        );
+        TripDocumentRepository repository =
+                new TripDocumentRepository();
 
-
-    }
-
-
-    // =========================================================
-    // LOAD TRIPS
-    // =========================================================
-
-    private static void loadTripsForDate(LocalDate date) {
-
-        tripTable.getItems().clear();
-
-        tripTable.getItems().addAll(
-
-                TripCacheManager
-                        .getTripCache()
-                        .stream()
-                        .filter(trip ->
-                                trip.getTripDate() != null
-                                        &&
-                                        trip.getTripDate().equals(date)
+        documentTable.setItems(
+                FXCollections.observableArrayList(
+                        repository.findByTripUuid(
+                                trip.getId()
                         )
-                        .toList()
-        );
-    }
-
-    private static void updateSummaryCards() {
-
-        var monthlyTrips =
-                TripCacheManager
-                        .getTripCache()
-                        .stream()
-                        .filter(trip ->
-
-                                trip.getTripDate() != null
-                                        &&
-
-                                        trip.getTripDate().getMonth()
-                                                == currentMonth.getMonth()
-
-                                        &&
-
-                                        trip.getTripDate().getYear()
-                                                == currentMonth.getYear()
-                        )
-                        .toList();
-
-        // =========================================
-        // TOTAL TRIPS
-        // =========================================
-
-        int totalTrips =
-                monthlyTrips.size();
-
-        // =========================================
-        // TOTAL SELL
-        // =========================================
-
-        double totalSell =
-                monthlyTrips.stream()
-                        .mapToDouble(Trip::getSellAmount)
-                        .sum();
-
-        // =========================================
-        // TOTAL PURCHASE
-        // =========================================
-
-        double totalPurchase =
-                monthlyTrips.stream()
-                        .mapToDouble(Trip::getPurchaseAmount)
-                        .sum();
-
-        // =========================================
-        // TOTAL PROFIT
-        // =========================================
-
-        double totalProfit =
-                monthlyTrips.stream()
-                        .mapToDouble(Trip::getProfit)
-                        .sum();
-
-        // =========================================
-        // UPDATE LABELS
-        // =========================================
-
-        totalTripsLabel.setText(
-                String.valueOf(totalTrips)
-        );
-
-        totalSellLabel.setText(
-                "₹ " + formatAmount(totalSell)
-        );
-
-        totalPurchaseLabel.setText(
-                "₹ " + formatAmount(totalPurchase)
-        );
-
-        totalProfitLabel.setText(
-                "₹ " + formatAmount(totalProfit)
-        );
-    }
-
-    private static String formatAmount(double value) {
-
-        return String.format("%,.2f", value);
-    }
-    // =========================================================
-    // COMPONENTS
-    // =========================================================
-
-
-    private static VBox summaryCard(
-            String title,
-            Label value
-    ) {
-
-        VBox card =
-                new VBox(10);
-
-        card.setPadding(new Insets(15));
-
-        card.setPrefWidth(180);
-
-        card.getStyleClass()
-                .add("summary-card");
-
-        Label titleLabel =
-                new Label(title);
-
-        titleLabel.getStyleClass()
-                .add("summary-title");
-
-        card.getChildren().addAll(
-                titleLabel,
-                value
-        );
-
-        return card;
-    }
-
-    private static Label summaryValue(String value) {
-
-        Label label =
-                new Label(value);
-
-        label.getStyleClass()
-                .add("summary-value");
-
-        return label;
-    }
-
-    private static void searchWithinSelectedDate(String keyword) {
-
-        String search =
-                keyword.toLowerCase();
-
-        tripTable.getItems().clear();
-
-        tripTable.getItems().addAll(
-
-                TripCacheManager
-                        .getTripCache()
-                        .stream()
-
-                        .filter(trip ->
-
-                                trip.getTripDate() != null
-                                        &&
-
-                                        trip.getTripDate()
-                                                .equals(selectedDate)
-                        )
-
-                        .filter(trip -> matchesSearch(trip, search))
-
-                        .toList()
-        );
-    }
-
-    private static void searchGlobally(String keyword) {
-
-        String search =
-                keyword.toLowerCase();
-
-        tripTable.getItems().clear();
-
-        tripTable.getItems().addAll(
-
-                TripCacheManager
-                        .getTripCache()
-                        .stream()
-
-                        .filter(trip ->
-                                matchesSearch(trip, search)
-                        )
-
-                        .toList()
-        );
-    }
-
-    private static boolean matchesSearch(
-            Trip trip,
-            String search
-    ) {
-
-        return contains(
-                trip.getNaam(),
-                search
-        )
-
-                ||
-
-                contains(
-                        trip.getSector(),
-                        search
                 )
+        );
 
-                ||
+        VBox.setVgrow(
+                documentTable,
+                Priority.ALWAYS
+        );
 
-                contains(
-                        trip.getAirlineName(),
-                        search
-                )
+        Button closeButton =
+                new Button("Close");
 
-                ||
+        closeButton.getStyleClass()
+                .add("secondary-button");
 
-                contains(
-                        trip.getPnrNo(),
-                        search
-                )
+        closeButton.setOnAction(e ->
+                stage.close()
+        );
 
-                ||
+        HBox footer =
+                new HBox(closeButton);
 
-                contains(
-                        trip.getStatus().name(),
-                        search
+        footer.setAlignment(Pos.CENTER_RIGHT);
+
+        root.getChildren().addAll(
+                title,
+                subtitle,
+                documentTable,
+                footer
+        );
+
+        Scene scene =
+                new Scene(
+                        root,
+                        720,
+                        520
                 );
+
+        scene.getStylesheets().add(
+                DashboardView.class
+                        .getResource("/css/app.css")
+                        .toExternalForm()
+        );
+
+        stage.setScene(scene);
+        stage.showAndWait();
     }
 
-    private static boolean contains(
-            String value,
-            String search
+    private static void viewDocument(
+            TripDocument document
     ) {
 
-        return value != null
-                &&
-                value.toLowerCase()
-                        .contains(search);
+        try {
+
+            if (document.getFilePath() == null
+                    || document.getFilePath().isBlank()) {
+
+                alert("Document path not found");
+                return;
+            }
+
+            File file =
+                    new File(
+                            document.getFilePath()
+                    );
+
+            if (!file.exists()) {
+
+                alert("Document not found");
+                return;
+            }
+
+            Desktop.getDesktop().open(file);
+
+        } catch (Exception e) {
+
+            alert("Failed to open document");
+        }
+    }
+
+    private static void downloadDocument(
+            TripDocument document
+    ) {
+
+        try {
+
+            if (document.getFilePath() == null
+                    || document.getFilePath().isBlank()) {
+
+                alert("Document path not found");
+                return;
+            }
+
+            File source =
+                    new File(
+                            document.getFilePath()
+                    );
+
+            if (!source.exists()) {
+
+                alert("Document not found");
+                return;
+            }
+
+            FileChooser chooser =
+                    new FileChooser();
+
+            chooser.setInitialFileName(
+                    document.getFileName()
+            );
+
+            File destination =
+                    chooser.showSaveDialog(null);
+
+            if (destination == null) {
+                return;
+            }
+
+            Files.copy(
+                    source.toPath(),
+                    destination.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
+            alert("Document downloaded successfully");
+
+        } catch (Exception e) {
+
+            alert("Failed to download document");
+        }
+    }
+
+    private static void deleteDocument(
+            TripDocument document,
+            TableView<TripDocument> documentTable
+    ) {
+
+        Alert confirm =
+                new Alert(Alert.AlertType.CONFIRMATION);
+
+        confirm.setTitle("Delete Document");
+        confirm.setHeaderText("Are you sure you want to delete this document?");
+        confirm.setContentText(document.getFileName());
+
+        Optional<ButtonType> result =
+                confirm.showAndWait();
+
+        if (result.isEmpty()
+                || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        try {
+
+            TripDocumentRepository repository =
+                    new TripDocumentRepository();
+
+            boolean deleted =
+                    repository.deleteByUuid(
+                            document.getUuid()
+                    );
+
+            if (deleted) {
+
+                if (document.getFilePath() != null) {
+
+                    Files.deleteIfExists(
+                            new File(
+                                    document.getFilePath()
+                            ).toPath()
+                    );
+                }
+
+                documentTable.getItems()
+                        .remove(document);
+
+                alert("Document deleted successfully");
+            }
+
+        } catch (Exception e) {
+
+            alert("Failed to delete document");
+        }
+    }
+
+    private static String safe(String value) {
+
+        return value == null || value.isBlank()
+                ? "-"
+                : value;
     }
 
     private static void alert(String message) {
 
         Alert alert =
-                new Alert(Alert.AlertType.INFORMATION);
+                new Alert(
+                        Alert.AlertType.INFORMATION
+                );
 
         alert.setContentText(message);
 
         alert.showAndWait();
     }
-
-
 }

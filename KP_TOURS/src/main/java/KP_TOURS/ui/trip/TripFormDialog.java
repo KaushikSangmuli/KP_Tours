@@ -2,11 +2,14 @@ package KP_TOURS.ui.trip;
 
 import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.model.Trip;
+import KP_TOURS.model.TripDocument;
 import KP_TOURS.model.TripStatus;
+import KP_TOURS.repository.TripDocumentRepository;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.util.FileUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -17,12 +20,10 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TripFormDialog {
-
-    // =========================================================
-    // OPEN ADD FORM
-    // =========================================================
 
     public static void openAddDialog(
             LocalDate selectedDate,
@@ -36,10 +37,6 @@ public class TripFormDialog {
         );
     }
 
-    // =========================================================
-    // OPEN EDIT FORM
-    // =========================================================
-
     public static void openEditDialog(
             Trip trip,
             Runnable refreshCallback
@@ -51,10 +48,6 @@ public class TripFormDialog {
                 refreshCallback
         );
     }
-
-    // =========================================================
-    // MAIN DIALOG
-    // =========================================================
 
     private static void openDialog(
             Trip existingTrip,
@@ -76,13 +69,40 @@ public class TripFormDialog {
         );
 
         VBox root =
-                new VBox(15);
+                new VBox(18);
 
-        root.setPadding(new Insets(20));
+        root.setPadding(
+                new Insets(28)
+        );
 
-        // =====================================================
-        // DATE
-        // =====================================================
+        root.getStyleClass()
+                .add("trip-form-root");
+
+        VBox header =
+                new VBox(4);
+
+        Label title =
+                new Label(
+                        existingTrip == null
+                                ? "Add New Trip"
+                                : "Edit Trip"
+                );
+
+        title.getStyleClass()
+                .add("trip-form-title");
+
+        Label subtitle =
+                new Label(
+                        "Enter booking details and attach related documents."
+                );
+
+        subtitle.getStyleClass()
+                .add("trip-form-subtitle");
+
+        header.getChildren().addAll(
+                title,
+                subtitle
+        );
 
         DatePicker tripDate =
                 new DatePicker();
@@ -93,12 +113,11 @@ public class TripFormDialog {
                         : defaultDate
         );
 
-        // =====================================================
-        // INPUTS
-        // =====================================================
+        tripDate.getStyleClass()
+                .add("premium-input");
 
-        TextField naam =
-                input("Naam");
+        TextField name =
+                input("Name");
 
         TextField sector =
                 input("Sector");
@@ -112,8 +131,25 @@ public class TripFormDialog {
         TextField purchaseAmount =
                 input("Purchase Amount");
 
-        TextField bookedBy =
-                input("Booked By");
+        ComboBox<String> bookedBy =
+                new ComboBox<>();
+
+        bookedBy.getItems().addAll(
+                "Cash",
+                "Credit",
+                "Card"
+        );
+
+        bookedBy.setPromptText(
+                "Select Booked By"
+        );
+
+        bookedBy.setMaxWidth(
+                Double.MAX_VALUE
+        );
+
+        bookedBy.getStyleClass()
+                .add("premium-input");
 
         TextField pnr =
                 input("PNR Number");
@@ -125,46 +161,77 @@ public class TripFormDialog {
                 TripStatus.values()
         );
 
-        status.setPrefWidth(Double.MAX_VALUE);
-
         status.setPromptText(
                 "Select Status"
         );
 
-        // =====================================================
-        // DOCUMENT
-        // =====================================================
+        status.setMaxWidth(
+                Double.MAX_VALUE
+        );
+
+        status.getStyleClass()
+                .add("premium-input");
+
+        TextArea description =
+                new TextArea();
+
+        description.setPromptText(
+                "Description"
+        );
+
+        description.setPrefRowCount(3);
+
+        description.setWrapText(true);
+
+        description.getStyleClass()
+                .add("premium-text-area");
 
         Label documentLabel =
                 new Label("No File Selected");
 
-        final File[] selectedDocument =
-                new File[1];
+        documentLabel.getStyleClass()
+                .add("document-label");
+
+        List<File> selectedDocuments =
+                new ArrayList<>();
 
         Button uploadButton =
-                new Button("Upload Document");
+                new Button("Upload Documents");
+
+        uploadButton.getStyleClass()
+                .add("secondary-button");
 
         uploadButton.setOnAction(e -> {
 
             FileChooser chooser =
                     new FileChooser();
 
-            File file =
-                    chooser.showOpenDialog(stage);
+            chooser.setTitle(
+                    "Select Documents"
+            );
 
-            if (file != null) {
+            List<File> files =
+                    chooser.showOpenMultipleDialog(stage);
 
-                selectedDocument[0] = file;
+            if (files != null && !files.isEmpty()) {
+
+                selectedDocuments.clear();
+
+                selectedDocuments.addAll(files);
 
                 documentLabel.setText(
-                        file.getName()
+                        files.size() + " file(s) selected"
                 );
             }
         });
 
-        // =====================================================
-        // PREFILL EDIT DATA
-        // =====================================================
+        VBox documentBox =
+                new VBox(10);
+
+        documentBox.getChildren().addAll(
+                uploadButton,
+                documentLabel
+        );
 
         if (existingTrip != null) {
 
@@ -172,8 +239,8 @@ public class TripFormDialog {
                     existingTrip.getTripDate()
             );
 
-            naam.setText(
-                    existingTrip.getNaam()
+            name.setText(
+                    existingTrip.getName()
             );
 
             sector.setText(
@@ -196,7 +263,7 @@ public class TripFormDialog {
                     )
             );
 
-            bookedBy.setText(
+            bookedBy.setValue(
                     existingTrip.getBookedBy()
             );
 
@@ -208,52 +275,46 @@ public class TripFormDialog {
                     existingTrip.getStatus()
             );
 
-            documentLabel.setText(
-                    existingTrip.getDocumentPath() == null
-                            ? "No File Attached"
-                            : "Document Attached"
+            description.setText(
+                    existingTrip.getDescription()
             );
         }
 
-        // =====================================================
-        // BUTTONS
-        // =====================================================
-
         Button saveButton =
-                new Button("Save");
+                new Button("Save Trip");
+
+        saveButton.getStyleClass()
+                .add("primary-button");
 
         Button cancelButton =
                 new Button("Cancel");
+
+        cancelButton.getStyleClass()
+                .add("secondary-button");
 
         saveButton.setOnAction(e -> {
 
             try {
 
-                // =============================================
-                // VALIDATION
-                // =============================================
-
-                if (naam.getText().trim().isEmpty()) {
-
-                    alert("Naam is required");
+                if (name.getText().trim().isEmpty()) {
+                    alert("Name is required");
                     return;
                 }
 
                 if (sector.getText().trim().isEmpty()) {
-
                     alert("Sector is required");
                     return;
                 }
 
-                if (status.getValue() == null) {
-
-                    alert("Please select status");
+                if (bookedBy.getValue() == null) {
+                    alert("Please select booked by");
                     return;
                 }
 
-                // =============================================
-                // CREATE / UPDATE TRIP
-                // =============================================
+                if (status.getValue() == null) {
+                    alert("Please select status");
+                    return;
+                }
 
                 Trip trip =
                         existingTrip == null
@@ -264,8 +325,8 @@ public class TripFormDialog {
                         tripDate.getValue()
                 );
 
-                trip.setNaam(
-                        naam.getText().trim()
+                trip.setName(
+                        name.getText().trim()
                 );
 
                 trip.setSector(
@@ -289,7 +350,7 @@ public class TripFormDialog {
                 );
 
                 trip.setBookedBy(
-                        bookedBy.getText().trim()
+                        bookedBy.getValue()
                 );
 
                 trip.setPnrNo(
@@ -300,48 +361,67 @@ public class TripFormDialog {
                         status.getValue()
                 );
 
-                // =============================================
-                // DOCUMENT SAVE
-                // =============================================
+                trip.setDescription(
+                        description.getText() == null
+                                ? null
+                                : description.getText().trim()
+                );
 
-                if (selectedDocument[0] != null) {
-
-                    String savedPath =
-                            FileUtil.saveDocument(
-                                    selectedDocument[0]
-                            );
-
-                    trip.setDocumentPath(
-                            savedPath
-                    );
-                }
-
-                // =============================================
-                // DB OPERATIONS
-                // =============================================
-
-                TripRepository repository =
+                TripRepository tripRepository =
                         new TripRepository();
 
                 if (existingTrip == null) {
 
-                    repository.save(trip);
+                    tripRepository.save(trip);
 
                     TripCacheManager.addTrip(trip);
 
                 } else {
 
-                    repository.update(trip);
+                    tripRepository.update(trip);
 
                     TripCacheManager.updateTrip(trip);
                 }
 
-                // =============================================
-                // REFRESH CALLBACK
-                // =============================================
+                if (!selectedDocuments.isEmpty()) {
+
+                    TripDocumentRepository documentRepository =
+                            new TripDocumentRepository();
+
+                    for (File file : selectedDocuments) {
+
+                        String savedPath =
+                                FileUtil.saveDocument(
+                                        file,
+                                        trip
+                                );
+
+                        if (savedPath == null) {
+                            continue;
+                        }
+
+                        TripDocument document =
+                                new TripDocument();
+
+                        document.setTripUuid(
+                                trip.getId()
+                        );
+
+                        document.setFileName(
+                                new File(savedPath).getName()
+                        );
+
+                        document.setFilePath(
+                                savedPath
+                        );
+
+                        documentRepository.save(
+                                document
+                        );
+                    }
+                }
 
                 if (refreshCallback != null) {
-
                     refreshCallback.run();
                 }
 
@@ -355,77 +435,119 @@ public class TripFormDialog {
             }
         });
 
-        cancelButton.setOnAction(e -> {
-
-            stage.close();
-        });
+        cancelButton.setOnAction(e ->
+                stage.close()
+        );
 
         HBox buttons =
                 new HBox(
-                        10,
-                        saveButton,
-                        cancelButton
+                        12,
+                        cancelButton,
+                        saveButton
                 );
 
         buttons.setAlignment(
                 Pos.CENTER_RIGHT
         );
 
-        // =====================================================
-        // ROOT
-        // =====================================================
-
         root.getChildren().addAll(
-
-                new Label("Trip Date"),
-                tripDate,
-
-                naam,
-                sector,
-                airline,
-                sellAmount,
-                purchaseAmount,
-                bookedBy,
-                pnr,
-                status,
-
-                uploadButton,
-                documentLabel,
-
+                header,
+                field("Trip Date", tripDate),
+                field("Name", name),
+                field("Sector", sector),
+                field("Airline Name", airline),
+                field("Sell Amount", sellAmount),
+                field("Purchase Amount", purchaseAmount),
+                field("Booked By", bookedBy),
+                field("PNR Number", pnr),
+                field("Status", status),
+                field("Description", description),
+                field("Documents", documentBox),
                 buttons
         );
 
+        ScrollPane scrollPane =
+                new ScrollPane(root);
+
+        scrollPane.setFitToWidth(true);
+
+        scrollPane.setHbarPolicy(
+                ScrollPane.ScrollBarPolicy.NEVER
+        );
+
+        scrollPane.setVbarPolicy(
+                ScrollPane.ScrollBarPolicy.AS_NEEDED
+        );
+
+        scrollPane.getStyleClass()
+                .add("trip-form-scroll");
+
         Scene scene =
                 new Scene(
-                        root,
-                        450,
-                        700
+                        scrollPane,
+                        540,
+                        720
                 );
+
+        scene.getStylesheets().add(
+                TripFormDialog.class
+                        .getResource("/css/app.css")
+                        .toExternalForm()
+        );
 
         stage.setScene(scene);
 
         stage.showAndWait();
     }
 
-    // =========================================================
-    // HELPERS
-    // =========================================================
+    private static VBox field(
+            String labelText,
+            Node node
+    ) {
 
-    private static TextField input(String prompt) {
+        VBox box =
+                new VBox(8);
+
+        Label label =
+                new Label(labelText);
+
+        label.getStyleClass()
+                .add("field-title");
+
+        box.getChildren().addAll(
+                label,
+                node
+        );
+
+        return box;
+    }
+
+    private static TextField input(
+            String prompt
+    ) {
 
         TextField field =
                 new TextField();
 
-        field.setPromptText(prompt);
+        field.setPromptText(
+                prompt
+        );
+
+        field.getStyleClass()
+                .add("premium-input");
 
         return field;
     }
 
-    private static double parseDouble(String value) {
+    private static double parseDouble(
+            String value
+    ) {
 
         try {
 
-            return Double.parseDouble(value);
+            return Double.parseDouble(
+                    value
+            );
 
         } catch (Exception e) {
 
@@ -433,12 +555,18 @@ public class TripFormDialog {
         }
     }
 
-    private static void alert(String message) {
+    private static void alert(
+            String message
+    ) {
 
         Alert alert =
-                new Alert(Alert.AlertType.INFORMATION);
+                new Alert(
+                        Alert.AlertType.INFORMATION
+                );
 
-        alert.setContentText(message);
+        alert.setContentText(
+                message
+        );
 
         alert.showAndWait();
     }

@@ -98,7 +98,7 @@ public class TripCacheManager {
 
         return new FilteredList<>(tripCache, trip ->
 
-                contains(trip.getNaam(), searchText)
+                contains(trip.getName(), searchText)
                         || contains(trip.getSector(), searchText)
                         || contains(trip.getAirlineName(), searchText)
                         || contains(trip.getBookedBy(), searchText)
