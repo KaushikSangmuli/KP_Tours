@@ -16,6 +16,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -79,8 +81,11 @@ public class DashboardView {
         HBox titleRow = new HBox(18);
         titleRow.setAlignment(Pos.CENTER_LEFT);
 
-        Label logo = new Label("✈");
+        ImageView logo =
+                icon("logo.png", 50);
+
         logo.getStyleClass().add("app-logo");
+
 
         VBox titleBox = new VBox(2);
 
@@ -142,12 +147,12 @@ public class DashboardView {
         cardGrid.setVgap(16);
         cardGrid.getStyleClass().add("summary-grid");
 
-        VBox card1 = summaryCard("💼", "Total Trips", totalTripsLabel);
-        VBox card2 = summaryCard("₹", "Total Sell", totalSellLabel);
-        VBox card3 = summaryCard("🛒", "Total Purchase", totalPurchaseLabel);
-        VBox card4 = summaryCard("📈", "Total Profit", totalProfitLabel);
-        VBox card5 = summaryCard("⏳", "Pending", pendingTripsLabel);
-        VBox card6 = summaryCard("✖", "Cancelled", cancelledTripsLabel);
+        VBox card1 = summaryCard("trip.png", "Total Trips", totalTripsLabel);
+        VBox card2 = summaryCard("money.png", "Total Sell", totalSellLabel);
+        VBox card3 = summaryCard("purchase.png", "Total Purchase", totalPurchaseLabel);
+        VBox card4 = summaryCard("profit.png", "Total Profit", totalProfitLabel);
+        VBox card5 = summaryCard("pending.png", "Pending", pendingTripsLabel);
+        VBox card6 = summaryCard("cancelled.png", "Cancelled", cancelledTripsLabel);
 
         VBox[] cards = {
                 card1,
@@ -686,8 +691,12 @@ public class DashboardView {
         HBox row = new HBox(12);
         row.setAlignment(Pos.CENTER_LEFT);
 
-        Label iconLabel = new Label(icon);
-        iconLabel.getStyleClass().add("summary-icon");
+        StackPane iconBox =
+                new StackPane(
+                        icon(icon, 35)
+                );
+
+        iconBox.getStyleClass().add("summary-icon");
 
         VBox textBox = new VBox(3);
 
@@ -704,7 +713,7 @@ public class DashboardView {
         );
 
         row.getChildren().addAll(
-                iconLabel,
+                iconBox,
                 textBox
         );
 
@@ -760,6 +769,28 @@ public class DashboardView {
                         .filter(trip -> matchesSearch(trip, search))
                         .toList()
         );
+    }
+
+    private static ImageView icon(
+            String iconName,
+            int size
+    ) {
+
+        ImageView imageView =
+                new ImageView(
+                        new Image(
+                                DashboardView.class
+                                        .getResourceAsStream(
+                                                "/icons/" + iconName
+                                        )
+                        )
+                );
+
+        imageView.setFitWidth(size);
+        imageView.setFitHeight(size);
+        imageView.setPreserveRatio(true);
+
+        return imageView;
     }
 
     private static void searchGlobally(String keyword) {

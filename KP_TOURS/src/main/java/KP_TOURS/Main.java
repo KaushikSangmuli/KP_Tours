@@ -1,5 +1,6 @@
 package KP_TOURS;
 
+import KP_TOURS.backup.AutoBackupScheduler;
 import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.db.DBInit;
 import KP_TOURS.repository.TripRepository;
@@ -21,6 +22,8 @@ public class Main extends Application {
         TripCacheManager.initialize(
                 repository.findAll()
         );
+
+        AutoBackupScheduler.start();
 
         Scene scene =
                 new Scene(
