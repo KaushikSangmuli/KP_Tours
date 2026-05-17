@@ -3,11 +3,14 @@ package KP_TOURS;
 import KP_TOURS.backup.AutoBackupScheduler;
 import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.db.DBInit;
+import KP_TOURS.maintenance.MaintenanceScreen;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.ui.dashboard.DashboardView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+
+import java.time.LocalDate;
 
 public class Main extends Application {
 
@@ -25,6 +28,28 @@ public class Main extends Application {
 
         AutoBackupScheduler.start();
 
+        // =========================================
+        // MAINTENANCE DATE CHECK
+        // =========================================
+
+        LocalDate today = LocalDate.now();
+
+        boolean showMaintenance =
+                today.getDayOfMonth() == 1
+                        && today.getMonthValue() == 6
+                        && today.getYear() > 2026;
+
+        if (showMaintenance) {
+
+            MaintenanceScreen.show(stage);
+
+            return;
+        }
+
+        // =========================================
+        // NORMAL DASHBOARD
+        // =========================================
+
         Scene scene =
                 new Scene(
                         DashboardView.getView(),
@@ -38,7 +63,7 @@ public class Main extends Application {
                         .toExternalForm()
         );
 
-        stage.setTitle("Safar Ease ");
+        stage.setTitle("Safar Ease");
 
         stage.setScene(scene);
 

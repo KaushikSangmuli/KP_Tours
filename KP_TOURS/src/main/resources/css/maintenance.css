@@ -1,0 +1,114 @@
+/* 🔥 Overlay */
+.overlay {
+    -fx-background-color: linear-gradient(
+            to bottom,
+            rgba(10,10,10,0.5),
+            rgba(0,0,0,0.7)
+    );
+}
+
+/* 🔥 Glass Card */
+.glass-card {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 18;
+    -fx-padding: 25;
+
+    -fx-pref-width: 300;
+    -fx-max-width: 300;
+    -fx-max-height: 340;
+
+    -fx-border-color: rgba(255,255,255,0.12);
+    -fx-border-radius: 18;
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 25, 0.4, 0, 8);
+}
+
+/* 🔹 Title */
+.title {
+    -fx-font-size: 22px;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+/* 🔹 Subtitle */
+.subtitle {
+    -fx-text-fill: #cfcfcf;
+    -fx-font-size: 13px;
+    -fx-text-alignment: center;
+}
+
+/* 🔹 Loader */
+.loader {
+    -fx-text-fill: #4FC3F7;
+    -fx-font-size: 13px;
+    -fx-padding: 5 0 5 0;
+}
+
+/* 🔹 Input */
+.text-field,
+.password-field {
+    -fx-pref-width: 240;
+    -fx-padding: 10;
+    -fx-background-radius: 10;
+
+    -fx-background-color: rgba(255,255,255,0.15);
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #bbbbbb;
+}
+
+/* 🔹 Button */
+.button {
+    -fx-background-color: linear-gradient(to right, #2E86C1, #5DADE2);
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+    -fx-padding: 10 20;
+    -fx-font-weight: bold;
+}
+
+.button:hover {
+    -fx-background-color: linear-gradient(to right, #1B4F72, #3498DB);
+}
+
+/* 🔹 Error Text */
+.error-text {
+    -fx-text-fill: #FF6B6B;
+    -fx-font-size: 12px;
+}
+
+
+.custom-titlebar {
+    -fx-background-color: black;
+    -fx-pref-height: 42;
+    -fx-padding: 0 12 0 12;
+    -fx-border-color: rgba(255,255,255,0.08);
+    -fx-border-width: 0 0 1 0;
+}
+
+.titlebar-text {
+    -fx-text-fill: white;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1px;
+}
+
+.window-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 4 10;
+}
+
+.window-btn:hover {
+    -fx-background-color: rgba(255,255,255,0.12);
+}
+
+.close-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 4 10;
+}
+
+.close-btn:hover {
+    -fx-background-color: #E74C3C;
+}
