@@ -482,6 +482,10 @@ public class DashboardView {
         pnr.setCellValueFactory(cell ->
                 new SimpleStringProperty(cell.getValue().getPnrNo())
         );
+        TableColumn<Trip, String> bookedBy = new TableColumn<>("Booked By");
+        bookedBy.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getBookedBy())
+        );
 
         TableColumn<Trip, String> status = new TableColumn<>("Status");
         status.setCellValueFactory(cell ->
@@ -492,9 +496,9 @@ public class DashboardView {
                 )
         );
 
-        TableColumn<Trip, Double> profit = new TableColumn<>("Profit");
-        profit.setCellValueFactory(cell ->
-                new SimpleObjectProperty<>(cell.getValue().getProfit())
+        TableColumn<Trip, Double> sellAmount = new TableColumn<>("Sell Amount");
+        sellAmount.setCellValueFactory(cell ->
+                new SimpleObjectProperty<>(cell.getValue().getSellAmount())
         );
 
         TableColumn<Trip, Void> action = new TableColumn<>("Actions");
@@ -503,9 +507,10 @@ public class DashboardView {
         sector.setPrefWidth(130);
         airline.setPrefWidth(150);
         pnr.setPrefWidth(120);
+        bookedBy.setPrefWidth(100);
         status.setPrefWidth(110);
-        profit.setPrefWidth(100);
-        action.setPrefWidth(280);
+        sellAmount.setPrefWidth(110);
+        action.setPrefWidth(250);
 
         action.setCellFactory(param -> new TableCell<>() {
 
@@ -579,8 +584,9 @@ public class DashboardView {
                 sector,
                 airline,
                 pnr,
+                bookedBy,
                 status,
-                profit,
+                sellAmount,
                 action
         );
 
