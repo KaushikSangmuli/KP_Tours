@@ -278,7 +278,10 @@
 .summary-card:hover {
     -fx-translate-y: -2;
 }
-
+.tooltip {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
 .summary-icon {
     -fx-font-size: 22px;
 

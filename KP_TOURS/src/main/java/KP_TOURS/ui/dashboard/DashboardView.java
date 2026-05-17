@@ -633,23 +633,38 @@ public class DashboardView {
                 String.valueOf(monthlyTrips.size())
         );
 
-        totalSellLabel.setText(
-                "₹ "
-                        + formatAmount(
+        String totalSell =
+                "₹ " + formatAmount(
                         monthlyTrips.stream()
                                 .mapToDouble(Trip::getSellAmount)
                                 .sum()
-                )
-        );
+                );
 
-        totalPurchaseLabel.setText(
-                "₹ "
-                        + formatAmount(
+        totalSellLabel.setText(totalSell);
+        totalSellLabel.setTooltip(new Tooltip(totalSell));
+
+        String totalPurchase =
+                "₹ " + formatAmount(
                         monthlyTrips.stream()
                                 .mapToDouble(Trip::getPurchaseAmount)
                                 .sum()
-                )
-        );
+                );
+
+        totalPurchaseLabel.setText(totalPurchase);
+
+        totalPurchaseLabel.setTooltip(new Tooltip(totalPurchase));
+
+        String totalProfit =
+                "₹ " + formatAmount(
+                        monthlyTrips.stream()
+                                .mapToDouble(Trip::getProfit)
+                                .sum()
+                );
+
+        totalProfitLabel.setText(totalProfit);
+
+        totalProfitLabel.setTooltip(new Tooltip(totalProfit));
+
 
         totalProfitLabel.setText(
                 "₹ "
