@@ -131,25 +131,8 @@ public class TripFormDialog {
         TextField purchaseAmount =
                 input("Purchase Amount");
 
-        ComboBox<String> bookedBy =
-                new ComboBox<>();
-
-        bookedBy.getItems().addAll(
-                "Cash",
-                "Credit",
-                "Card"
-        );
-
-        bookedBy.setPromptText(
-                "Select Booked By"
-        );
-
-        bookedBy.setMaxWidth(
-                Double.MAX_VALUE
-        );
-
-        bookedBy.getStyleClass()
-                .add("premium-input");
+        TextField bookedBy =
+                input("Booked By");
 
         TextField pnr =
                 input("PNR Number");
@@ -263,7 +246,7 @@ public class TripFormDialog {
                     )
             );
 
-            bookedBy.setValue(
+            bookedBy.setText(
                     existingTrip.getBookedBy()
             );
 
@@ -306,8 +289,8 @@ public class TripFormDialog {
                     return;
                 }
 
-                if (bookedBy.getValue() == null) {
-                    alert("Please select booked by");
+                if (bookedBy.getText().trim().isEmpty()) {
+                    alert("Booked by is required");
                     return;
                 }
 
@@ -350,7 +333,7 @@ public class TripFormDialog {
                 );
 
                 trip.setBookedBy(
-                        bookedBy.getValue()
+                        bookedBy.getText().trim()
                 );
 
                 trip.setPnrNo(

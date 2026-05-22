@@ -89,7 +89,7 @@ public class DashboardView {
 
         VBox titleBox = new VBox(2);
 
-        Label appTitle = new Label("AK Technologies ");
+        Label appTitle = new Label("KP Tours ");
         appTitle.getStyleClass().add("app-title");
 
         Label subtitle = new Label("Travel Desk Management");
