@@ -3,6 +3,7 @@ package KP_TOURS;
 import KP_TOURS.backup.AutoBackupScheduler;
 import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.db.DBInit;
+import KP_TOURS.maintenance.MaintenanceAccessManager;
 import KP_TOURS.maintenance.MaintenanceScreen;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.ui.dashboard.DashboardView;
@@ -27,6 +28,7 @@ public class Main extends Application {
         );
 
         AutoBackupScheduler.start();
+        MaintenanceAccessManager.initializeFlagFileIfMissing();
 
         // =========================================
         // MAINTENANCE DATE CHECK
@@ -39,7 +41,7 @@ public class Main extends Application {
                         && today.getMonthValue() == 6
                         && today.getYear() > 2026;
 
-        if (showMaintenance) {
+        if (showMaintenance && !MaintenanceAccessManager.isMaintenanceUnlocked()) {
 
             MaintenanceScreen.show(stage);
 

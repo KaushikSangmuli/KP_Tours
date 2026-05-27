@@ -109,6 +109,8 @@ public class MaintenanceScreen {
 
         if ("7000705523".equals(keyField.getText())) {
 
+            MaintenanceAccessManager.markMaintenanceUnlocked();
+
             message.setText("Access Granted");
 
             Scene dashboardScene = new Scene(
