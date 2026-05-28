@@ -8,6 +8,7 @@ import KP_TOURS.model.TripStatus;
 import KP_TOURS.repository.TripDocumentRepository;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.ui.accounts.AccountView;
+import KP_TOURS.ui.sidebar.SidebarView;
 import KP_TOURS.ui.trip.TripFormDialog;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -34,29 +35,25 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
+import static KP_TOURS.ui.dashboard.DashboardHeaderView.*;
+
 public class DashboardView {
 
     private static final GridPane calendarGrid = new GridPane();
     private static final TableView<Trip> tripTable = new TableView<>();
 
     private static final Label monthLabel = new Label();
-    private static final Label monthOverviewLabel = new Label();
+    public static final Label monthOverviewLabel = new Label();
     private static final Label selectedDateLabel = new Label();
 
-    private static YearMonth currentMonth = YearMonth.now();
-    private static LocalDate selectedDate = LocalDate.now();
+    public static YearMonth currentMonth = YearMonth.now();
+    public static LocalDate selectedDate = LocalDate.now();
 
     private static final TextField localSearchField = new TextField();
     private static final TextField globalSearchField = new TextField();
 
     private static boolean globalSearchMode = false;
 
-    private static final Label totalTripsLabel = summaryValue("0");
-    private static final Label totalSellLabel = summaryValue("₹ 0.00");
-    private static final Label totalPurchaseLabel = summaryValue("₹ 0.00");
-    private static final Label totalProfitLabel = summaryValue("₹ 0.00");
-    private static final Label pendingTripsLabel = summaryValue("0");
-    private static final Label cancelledTripsLabel = summaryValue("0");
 
     private static final StackPane contentArea = new StackPane();
     private static boolean profitVisible = false;
@@ -67,7 +64,7 @@ public class DashboardView {
         root.getStyleClass().add("dashboard-root");
 
         VBox existingContent = new VBox(
-                buildHeader(),
+                DashboardHeaderView.getView(),
                 buildCenter()
         );
 
@@ -78,7 +75,7 @@ public class DashboardView {
 
         contentArea.getChildren().add(existingContent);
 
-        root.setLeft(buildSidebar());
+        root.setLeft(SidebarView.getView());
         root.setCenter(contentArea);
 
         refreshCalendar();
@@ -89,141 +86,10 @@ public class DashboardView {
         return root;
     }
 
-    private static VBox buildSidebar() {
 
-        VBox sidebar = new VBox(14);
 
-        sidebar.setPrefWidth(230);
-        sidebar.setPadding(new Insets(24));
 
-        sidebar.getStyleClass().add("sidebar");
-
-        Label title = new Label("KP Tours");
-        title.getStyleClass().add("sidebar-title");
-
-        Button calendarBtn =
-                createSidebarButton("📅 Calendar");
-
-        Button ledgerBtn =
-                createSidebarButton("📒 A/C Master");
-
-        Button accountsBtn =
-                createSidebarButton("👤 A/C Ledger");
-
-        Button payRecBtn =
-                createSidebarButton("💳 Payables & Receivables");
-
-        Button purchaseSalesBtn =
-                createSidebarButton("🛒 Purchases & Sales");
-
-        Button creditNotesBtn =
-                createSidebarButton("🧾 Credit Notes");
-
-        Button trialBalanceBtn =
-                createSidebarButton("⚖ Trial Balance");
-
-        Region spacer = new Region();
-        VBox.setVgrow(spacer, Priority.ALWAYS);
-
-        Button settingsBtn =
-                createSidebarButton("⚙ Settings");
-
-        // =====================================================
-        // CALENDAR SCREEN
-        // =====================================================
-
-        calendarBtn.setOnAction(e -> {
-
-            VBox existingContent = new VBox(
-                    buildHeader(),
-                    buildCenter()
-            );
-
-            VBox.setVgrow(
-                    existingContent.getChildren().get(1),
-                    Priority.ALWAYS
-            );
-
-            contentArea.getChildren().setAll(existingContent);
-
-            refreshCalendar();
-            loadTripsForDate(selectedDate);
-            updateSummaryCards();
-        });
-
-        // =====================================================
-        // PLACEHOLDER SCREENS
-        // =====================================================
-
-        ledgerBtn.setOnAction(e ->
-                contentArea.getChildren().setAll(
-                        AccountView.getView()
-                )
-        );
-
-        accountsBtn.setOnAction(e ->
-                loadPlaceholderPage("Accounts"));
-
-        payRecBtn.setOnAction(e ->
-                loadPlaceholderPage("Payables & Receivables"));
-
-        purchaseSalesBtn.setOnAction(e ->
-                loadPlaceholderPage("Purchases & Sales"));
-
-        creditNotesBtn.setOnAction(e ->
-                loadPlaceholderPage("Credit Notes"));
-
-        trialBalanceBtn.setOnAction(e ->
-                loadPlaceholderPage("Trial Balance"));
-
-        settingsBtn.setOnAction(e ->
-                loadPlaceholderPage("Settings"));
-
-        sidebar.getChildren().addAll(
-                title,
-                calendarBtn,
-                ledgerBtn,
-                accountsBtn,
-                payRecBtn,
-                purchaseSalesBtn,
-                creditNotesBtn,
-                trialBalanceBtn,
-                spacer,
-                settingsBtn
-        );
-
-        return sidebar;
-    }
-
-    private static Button createSidebarButton(String text) {
-
-        Button button = new Button(text);
-
-        button.setMaxWidth(Double.MAX_VALUE);
-
-        button.setAlignment(Pos.CENTER_LEFT);
-
-        button.getStyleClass().add("sidebar-button");
-
-        return button;
-    }
-
-    private static void loadPlaceholderPage(String title) {
-
-        VBox root = new VBox();
-
-        root.setAlignment(Pos.CENTER);
-
-        Label label = new Label(title);
-
-        label.getStyleClass().add("section-title");
-
-        root.getChildren().add(label);
-
-        contentArea.getChildren().setAll(root);
-    }
-
-    private static VBox buildHeader() {
+    public static VBox buildHeader() {
 
         VBox wrapper = new VBox(22);
         wrapper.getStyleClass().add("premium-header");
@@ -486,7 +352,7 @@ public class DashboardView {
         return root;
     }
 
-    private static void refreshCalendar() {
+    public static void refreshCalendar() {
 
         calendarGrid.getChildren().clear();
 
@@ -731,7 +597,7 @@ public class DashboardView {
         );
     }
 
-    private static void loadTripsForDate(LocalDate date) {
+    public static void loadTripsForDate(LocalDate date) {
 
         selectedDateLabel.setText(
                 "Trips for "
@@ -753,7 +619,7 @@ public class DashboardView {
         );
     }
 
-    private static void updateSummaryCards() {
+    public static void updateSummaryCards() {
 
         var monthlyTrips =
                 TripCacheManager.getTripCache()
@@ -815,7 +681,7 @@ public class DashboardView {
         );
     }
 
-    private static VBox summaryCard(
+    public static VBox summaryCard(
             String icon,
             String title,
             Label value
@@ -881,7 +747,7 @@ public class DashboardView {
         return card;
     }
 
-    private static VBox summaryCardWithToggle(
+    public static VBox summaryCardWithToggle(
             String icon,
             String title,
             Label value
@@ -1528,7 +1394,42 @@ public class DashboardView {
 
         alert.showAndWait();
     }
+
     public static void loadScreen(Parent screen) {
         contentArea.getChildren().setAll(screen);
+    }
+
+    public static void loadCalendarScreen() {
+
+        VBox existingContent = new VBox(
+                DashboardHeaderView.getView(),
+                buildCenter()
+        );
+
+        VBox.setVgrow(
+                existingContent.getChildren().get(1),
+                Priority.ALWAYS
+        );
+
+        contentArea.getChildren().setAll(existingContent);
+
+        refreshCalendar();
+        loadTripsForDate(selectedDate);
+        updateSummaryCards();
+    }
+
+    public static void loadPlaceholderPage(String title) {
+
+        VBox root = new VBox();
+
+        root.setAlignment(Pos.CENTER);
+
+        Label label = new Label(title);
+
+        label.getStyleClass().add("section-title");
+
+        root.getChildren().add(label);
+
+        contentArea.getChildren().setAll(root);
     }
 }
