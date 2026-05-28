@@ -58,6 +58,38 @@ public class DBInit {
 
                         ");";
 
+        String accountsTable =
+                "CREATE TABLE IF NOT EXISTS accounts (" +
+
+                        "uuid TEXT PRIMARY KEY," +
+
+                        "account_no TEXT UNIQUE NOT NULL," +
+
+                        "name TEXT NOT NULL," +
+                        "address TEXT," +
+                        "city TEXT," +
+                        "phone_no TEXT," +
+                        "email TEXT," +
+
+                        "account_group TEXT NOT NULL," +
+
+                        "created_at TEXT," +
+                        "updated_at TEXT" +
+
+                        ");";
+
+        String idxAccountNo =
+                "CREATE INDEX IF NOT EXISTS idx_account_no " +
+                        "ON accounts(account_no);";
+
+        String idxAccountName =
+                "CREATE INDEX IF NOT EXISTS idx_account_name " +
+                        "ON accounts(name);";
+
+        String idxAccountGroup =
+                "CREATE INDEX IF NOT EXISTS idx_account_group " +
+                        "ON accounts(account_group);";
+
         String idxTripDate =
                 "CREATE INDEX IF NOT EXISTS idx_trip_date " +
                         "ON trips(trip_date);";
@@ -91,12 +123,16 @@ public class DBInit {
             );
 
             stmt.execute(documentsTable);
+            stmt.execute(accountsTable);
 
             stmt.execute(idxTripDate);
             stmt.execute(idxPnr);
             stmt.execute(idxName);
             stmt.execute(idxStatus);
             stmt.execute(idxDocumentsTripUuid);
+            stmt.execute(idxAccountNo);
+            stmt.execute(idxAccountName);
+            stmt.execute(idxAccountGroup);
 
             LoggerUtil.logInfo("Database initialized successfully");
 

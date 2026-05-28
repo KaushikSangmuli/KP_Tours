@@ -7,6 +7,7 @@ import KP_TOURS.model.TripDocument;
 import KP_TOURS.model.TripStatus;
 import KP_TOURS.repository.TripDocumentRepository;
 import KP_TOURS.repository.TripRepository;
+import KP_TOURS.ui.ledger.AccountView;
 import KP_TOURS.ui.trip.TripFormDialog;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -57,13 +58,28 @@ public class DashboardView {
     private static final Label pendingTripsLabel = summaryValue("0");
     private static final Label cancelledTripsLabel = summaryValue("0");
 
+    private static final StackPane contentArea = new StackPane();
+    private static boolean profitVisible = false;
+
     public static Parent getView() {
 
         BorderPane root = new BorderPane();
         root.getStyleClass().add("dashboard-root");
 
-        root.setTop(buildHeader());
-        root.setCenter(buildCenter());
+        VBox existingContent = new VBox(
+                buildHeader(),
+                buildCenter()
+        );
+
+        VBox.setVgrow(
+                existingContent.getChildren().get(1),
+                Priority.ALWAYS
+        );
+
+        contentArea.getChildren().add(existingContent);
+
+        root.setLeft(buildSidebar());
+        root.setCenter(contentArea);
 
         refreshCalendar();
         initializeTable();
@@ -73,6 +89,140 @@ public class DashboardView {
         return root;
     }
 
+    private static VBox buildSidebar() {
+
+        VBox sidebar = new VBox(14);
+
+        sidebar.setPrefWidth(230);
+        sidebar.setPadding(new Insets(24));
+
+        sidebar.getStyleClass().add("sidebar");
+
+        Label title = new Label("KP Tours");
+        title.getStyleClass().add("sidebar-title");
+
+        Button calendarBtn =
+                createSidebarButton("📅 Calendar");
+
+        Button ledgerBtn =
+                createSidebarButton("📒 A/C Master");
+
+        Button accountsBtn =
+                createSidebarButton("👤 A/C Ledger");
+
+        Button payRecBtn =
+                createSidebarButton("💳 Payables & Receivables");
+
+        Button purchaseSalesBtn =
+                createSidebarButton("🛒 Purchases & Sales");
+
+        Button creditNotesBtn =
+                createSidebarButton("🧾 Credit Notes");
+
+        Button trialBalanceBtn =
+                createSidebarButton("⚖ Trial Balance");
+
+        Region spacer = new Region();
+        VBox.setVgrow(spacer, Priority.ALWAYS);
+
+        Button settingsBtn =
+                createSidebarButton("⚙ Settings");
+
+        // =====================================================
+        // CALENDAR SCREEN
+        // =====================================================
+
+        calendarBtn.setOnAction(e -> {
+
+            VBox existingContent = new VBox(
+                    buildHeader(),
+                    buildCenter()
+            );
+
+            VBox.setVgrow(
+                    existingContent.getChildren().get(1),
+                    Priority.ALWAYS
+            );
+
+            contentArea.getChildren().setAll(existingContent);
+
+            refreshCalendar();
+            loadTripsForDate(selectedDate);
+            updateSummaryCards();
+        });
+
+        // =====================================================
+        // PLACEHOLDER SCREENS
+        // =====================================================
+
+        ledgerBtn.setOnAction(e ->
+                contentArea.getChildren().setAll(
+                        AccountView.getView()
+                )
+        );
+
+        accountsBtn.setOnAction(e ->
+                loadPlaceholderPage("Accounts"));
+
+        payRecBtn.setOnAction(e ->
+                loadPlaceholderPage("Payables & Receivables"));
+
+        purchaseSalesBtn.setOnAction(e ->
+                loadPlaceholderPage("Purchases & Sales"));
+
+        creditNotesBtn.setOnAction(e ->
+                loadPlaceholderPage("Credit Notes"));
+
+        trialBalanceBtn.setOnAction(e ->
+                loadPlaceholderPage("Trial Balance"));
+
+        settingsBtn.setOnAction(e ->
+                loadPlaceholderPage("Settings"));
+
+        sidebar.getChildren().addAll(
+                title,
+                calendarBtn,
+                ledgerBtn,
+                accountsBtn,
+                payRecBtn,
+                purchaseSalesBtn,
+                creditNotesBtn,
+                trialBalanceBtn,
+                spacer,
+                settingsBtn
+        );
+
+        return sidebar;
+    }
+
+    private static Button createSidebarButton(String text) {
+
+        Button button = new Button(text);
+
+        button.setMaxWidth(Double.MAX_VALUE);
+
+        button.setAlignment(Pos.CENTER_LEFT);
+
+        button.getStyleClass().add("sidebar-button");
+
+        return button;
+    }
+
+    private static void loadPlaceholderPage(String title) {
+
+        VBox root = new VBox();
+
+        root.setAlignment(Pos.CENTER);
+
+        Label label = new Label(title);
+
+        label.getStyleClass().add("section-title");
+
+        root.getChildren().add(label);
+
+        contentArea.getChildren().setAll(root);
+    }
+
     private static VBox buildHeader() {
 
         VBox wrapper = new VBox(22);
@@ -80,22 +230,6 @@ public class DashboardView {
 
         HBox titleRow = new HBox(18);
         titleRow.setAlignment(Pos.CENTER_LEFT);
-
-        ImageView logo =
-                icon("logo.png", 50);
-
-        logo.getStyleClass().add("app-logo");
-
-
-        VBox titleBox = new VBox(2);
-
-        Label appTitle = new Label("KP Tours ");
-        appTitle.getStyleClass().add("app-title");
-
-        Label subtitle = new Label("Travel Desk Management");
-        subtitle.getStyleClass().add("app-subtitle");
-
-        titleBox.getChildren().addAll(appTitle, subtitle);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -132,8 +266,6 @@ public class DashboardView {
         });
 
         titleRow.getChildren().addAll(
-                logo,
-                titleBox,
                 spacer,
                 monthOverviewLabel,
                 prevButton,
@@ -150,7 +282,11 @@ public class DashboardView {
         VBox card1 = summaryCard("trip.png", "Total Trips", totalTripsLabel);
         VBox card2 = summaryCard("money.png", "Total Sell", totalSellLabel);
         VBox card3 = summaryCard("purchase.png", "Total Purchase", totalPurchaseLabel);
-        VBox card4 = summaryCard("profit.png", "Total Profit", totalProfitLabel);
+        VBox card4 = summaryCardWithToggle(
+                "profit.png",
+                "Total Profit",
+                totalProfitLabel
+        );
         VBox card5 = summaryCard("pending.png", "Pending", pendingTripsLabel);
         VBox card6 = summaryCard("cancelled.png", "Cancelled", cancelledTripsLabel);
 
@@ -653,28 +789,7 @@ public class DashboardView {
         totalPurchaseLabel.setText(totalPurchase);
 
         totalPurchaseLabel.setTooltip(new Tooltip(totalPurchase));
-
-        String totalProfit =
-                "₹ " + formatAmount(
-                        monthlyTrips.stream()
-                                .mapToDouble(Trip::getProfit)
-                                .sum()
-                );
-
-        totalProfitLabel.setText(totalProfit);
-
-        totalProfitLabel.setTooltip(new Tooltip(totalProfit));
-
-
-        totalProfitLabel.setText(
-                "₹ "
-                        + formatAmount(
-                        monthlyTrips.stream()
-                                .mapToDouble(Trip::getProfit)
-                                .sum()
-                )
-        );
-
+        updateProfitVisibility();
         long pendingCount =
                 monthlyTrips.stream()
                         .filter(trip ->
@@ -764,6 +879,100 @@ public class DashboardView {
         });
 
         return card;
+    }
+
+    private static VBox summaryCardWithToggle(
+            String icon,
+            String title,
+            Label value
+    ) {
+
+        VBox card = new VBox(6);
+
+        card.getStyleClass().add("summary-card");
+
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        StackPane iconBox =
+                new StackPane(
+                        icon(icon, 35)
+                );
+
+        iconBox.getStyleClass().add("summary-icon");
+
+        VBox textBox = new VBox(3);
+
+        HBox titleRow = new HBox(8);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("summary-title");
+
+        Button eyeButton = new Button("👁");
+
+        eyeButton.getStyleClass().add("eye-button");
+
+        updateProfitVisibility();
+
+        eyeButton.setOnAction(e -> {
+
+            profitVisible = !profitVisible;
+
+            updateProfitVisibility();
+
+            eyeButton.setText(
+                    profitVisible ? "🙈" : "👁"
+            );
+        });
+
+        titleRow.getChildren().addAll(
+                titleLabel,
+                eyeButton
+        );
+
+        Label monthText = new Label("This Month");
+        monthText.getStyleClass().add("summary-subtitle");
+
+        textBox.getChildren().addAll(
+                titleRow,
+                value,
+                monthText
+        );
+
+        row.getChildren().addAll(
+                iconBox,
+                textBox
+        );
+
+        card.getChildren().add(row);
+
+        return card;
+    }
+
+    private static void updateProfitVisibility() {
+
+        if (profitVisible) {
+
+            String totalProfit =
+                    "₹ " + formatAmount(
+                            TripCacheManager.getTripCache()
+                                    .stream()
+                                    .filter(trip ->
+                                            trip.getTripDate() != null
+                                                    && trip.getTripDate().getMonth() == currentMonth.getMonth()
+                                                    && trip.getTripDate().getYear() == currentMonth.getYear()
+                                    )
+                                    .mapToDouble(Trip::getProfit)
+                                    .sum()
+                    );
+
+            totalProfitLabel.setText(totalProfit);
+
+        } else {
+
+            totalProfitLabel.setText("₹ ••••••");
+        }
     }
 
     private static Label summaryValue(String value) {
