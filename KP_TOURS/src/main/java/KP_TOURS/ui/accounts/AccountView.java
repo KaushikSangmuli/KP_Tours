@@ -1,15 +1,22 @@
-package KP_TOURS.ui.ledger;
+package KP_TOURS.ui.accounts;
 
 import KP_TOURS.model.Account;
 import KP_TOURS.repository.AccountRepository;
+import KP_TOURS.ui.dashboard.DashboardView;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.util.StringConverter;
+
+import java.util.List;
 
 public class AccountView {
+
+    private static Account selectedViewAccount;
 
     public static Parent getView() {
 
@@ -76,6 +83,85 @@ public class AccountView {
         groupBox.setMaxWidth(Double.MAX_VALUE);
         groupBox.getStyleClass().add("premium-combo");
 
+        ComboBox<Account> viewAccountBox = new ComboBox<>();
+        viewAccountBox.setPromptText("Type account name to view");
+        viewAccountBox.setMaxWidth(Double.MAX_VALUE);
+        viewAccountBox.getStyleClass().add("premium-combo");
+
+        viewAccountBox.setEditable(true);
+
+        viewAccountBox.setConverter(new StringConverter<Account>() {
+
+            @Override
+            public String toString(Account account) {
+
+                if (account == null) {
+                    return "";
+                }
+
+                return account.getName()
+                        + " - "
+                        + safe(account.getPhoneNo());
+            }
+
+            @Override
+            public Account fromString(String string) {
+                return selectedViewAccount;
+            }
+        });
+
+        viewAccountBox.setCellFactory(listView -> new ListCell<>() {
+            @Override
+            protected void updateItem(Account account, boolean empty) {
+                super.updateItem(account, empty);
+
+                if (empty || account == null) {
+                    setText(null);
+                } else {
+                    setText(account.getName() + " - " + account.getPhoneNo());
+                }
+            }
+        });
+
+        viewAccountBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Account account, boolean empty) {
+                super.updateItem(account, empty);
+
+                if (empty || account == null) {
+                    setText(null);
+                } else {
+                    setText(account.getName() + " - " + account.getPhoneNo());
+                }
+            }
+        });
+
+        viewAccountBox.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
+
+            if (newVal == null || newVal.isBlank()) {
+                viewAccountBox.getItems().clear();
+                selectedViewAccount = null;
+                return;
+            }
+
+
+            List<Account> accounts =
+                    repository.searchByName(newVal);
+
+            viewAccountBox.getItems().setAll(accounts);
+
+            if (!accounts.isEmpty()) {
+                viewAccountBox.show();
+            }
+        });
+
+        viewAccountBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+
+            if (newVal != null) {
+                selectedViewAccount = newVal;
+            }
+        });
+
         form.add(label("Name"), 0, 0);
         form.add(nameField, 1, 0);
 
@@ -90,6 +176,9 @@ public class AccountView {
 
         form.add(label("Account Group"), 0, 2);
         form.add(groupBox, 1, 2);
+
+        form.add(label("View Account"), 2, 2);
+        form.add(viewAccountBox, 3, 2);
 
         form.add(label("Address"), 0, 3);
         form.add(addressArea, 1, 3, 3, 1);
@@ -199,6 +288,21 @@ public class AccountView {
                 alert("Failed to save account");
             }
         });
+        showListBtn.setOnAction(e ->
+                DashboardView.loadScreen(
+                        AccountsListView.getView()
+                )
+        );
+
+        viewAccountBtn.setOnAction(e -> {
+
+            if (selectedViewAccount == null) {
+                alert("Please select account from dropdown");
+                return;
+            }
+
+            showAccountDetails(selectedViewAccount);
+        });
 
         actions.getChildren().addAll(
                 viewAccountBtn,
@@ -272,5 +376,30 @@ public class AccountView {
         card.getChildren().addAll(titleLabel, valueLabel, subtitle);
 
         return card;
+    }
+
+    private static void showAccountDetails(Account account) {
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+        alert.setTitle("Account Details");
+        alert.setHeaderText(account.getName());
+
+        alert.setContentText(
+                "Account No: " + safe(account.getAccountNo()) + "\n" +
+                        "Group: " + safe(account.getAccountGroup()) + "\n" +
+                        "City: " + safe(account.getCity()) + "\n" +
+                        "Phone No: " + safe(account.getPhoneNo()) + "\n" +
+                        "Email: " + safe(account.getEmail()) + "\n" +
+                        "Address: " + safe(account.getAddress())
+        );
+
+        alert.showAndWait();
+    }
+
+    private static String safe(String value) {
+        return value == null || value.isBlank()
+                ? "-"
+                : value;
     }
 }

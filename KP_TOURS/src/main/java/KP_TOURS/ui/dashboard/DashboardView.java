@@ -7,7 +7,7 @@ import KP_TOURS.model.TripDocument;
 import KP_TOURS.model.TripStatus;
 import KP_TOURS.repository.TripDocumentRepository;
 import KP_TOURS.repository.TripRepository;
-import KP_TOURS.ui.ledger.AccountView;
+import KP_TOURS.ui.accounts.AccountView;
 import KP_TOURS.ui.trip.TripFormDialog;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -1527,5 +1527,8 @@ public class DashboardView {
         alert.setContentText(message);
 
         alert.showAndWait();
+    }
+    public static void loadScreen(Parent screen) {
+        contentArea.getChildren().setAll(screen);
     }
 }

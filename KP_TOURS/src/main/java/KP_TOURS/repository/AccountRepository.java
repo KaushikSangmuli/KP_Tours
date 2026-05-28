@@ -212,6 +212,89 @@ public class AccountRepository {
     }
     private String generateAccountNo() {
 
-        return "ACC-" + System.currentTimeMillis();
+        String sql =
+                "SELECT COUNT(*) FROM accounts";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+
+            var rs = stmt.executeQuery();
+
+            if (rs.next()) {
+
+                int next =
+                        rs.getInt(1) + 1;
+
+                return String.format(
+                        "%0d",
+                        next
+                );
+            }
+
+        } catch (Exception e) {
+
+            LoggerUtil.logError(
+                    e,
+                    "Failed to generate account number"
+            );
+        }
+
+        return "ACC-0001";
     }
+    public boolean update(Account account) {
+
+        String sql =
+                "UPDATE accounts SET " +
+                        "name = ?, " +
+                        "address = ?, " +
+                        "city = ?, " +
+                        "phone_no = ?, " +
+                        "email = ?, " +
+                        "account_group = ?, " +
+                        "updated_at = ? " +
+                        "WHERE uuid = ?";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+
+            stmt.setString(1, account.getName());
+            stmt.setString(2, account.getAddress());
+            stmt.setString(3, account.getCity());
+            stmt.setString(4, account.getPhoneNo());
+            stmt.setString(5, account.getEmail());
+            stmt.setString(6, account.getAccountGroup());
+            stmt.setString(7, LocalDateTime.now().toString());
+            stmt.setString(8, account.getUuid());
+
+            return stmt.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            LoggerUtil.logError(e, "Failed to update account");
+            return false;
+        }
+    }
+
+    public boolean delete(String uuid) {
+
+        String sql = "DELETE FROM accounts WHERE uuid = ?";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+
+            stmt.setString(1, uuid);
+
+            return stmt.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            LoggerUtil.logError(e, "Failed to delete account");
+            return false;
+        }
+    }
+
 }

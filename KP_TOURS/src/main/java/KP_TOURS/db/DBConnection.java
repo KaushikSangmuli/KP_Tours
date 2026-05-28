@@ -31,7 +31,7 @@ public class DBConnection {
 
             // Ensure app directory exists
             new File(APP_DIR).mkdirs();
-
+            System.out.println("SQLite DB Path: " + DB_URL);
 
             return DriverManager.getConnection(DB_URL);
 
