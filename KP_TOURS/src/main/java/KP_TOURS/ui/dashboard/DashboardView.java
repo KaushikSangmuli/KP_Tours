@@ -118,27 +118,6 @@ public class DashboardView {
             updateSummaryCards();
         });
 
-        Button backupButton = new Button("Backup");
-        backupButton.getStyleClass().add("header-button");
-        backupButton.setOnAction(e -> BackupManager.createBackup());
-
-        Button restoreButton = new Button("Restore");
-        restoreButton.getStyleClass().add("header-button");
-        restoreButton.setOnAction(e -> {
-            BackupManager.restoreBackup();
-            loadTripsForDate(selectedDate);
-            refreshCalendar();
-            updateSummaryCards();
-        });
-
-        titleRow.getChildren().addAll(
-                spacer,
-                monthOverviewLabel,
-                prevButton,
-                nextButton,
-                backupButton,
-                restoreButton
-        );
 
         GridPane cardGrid = new GridPane();
         cardGrid.setHgap(16);

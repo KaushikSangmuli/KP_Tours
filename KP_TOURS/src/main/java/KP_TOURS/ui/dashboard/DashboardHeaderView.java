@@ -60,36 +60,13 @@ public class DashboardHeaderView {
             DashboardView.updateSummaryCards();
         });
 
-        Button backupButton = new Button("Backup");
-        backupButton.getStyleClass().add("header-button");
 
-        backupButton.setOnAction(e ->
-                BackupManager.createBackup()
-        );
-
-        Button restoreButton = new Button("Restore");
-        restoreButton.getStyleClass().add("header-button");
-
-        restoreButton.setOnAction(e -> {
-
-            BackupManager.restoreBackup();
-
-            DashboardView.loadTripsForDate(
-                    DashboardView.selectedDate
-            );
-
-            DashboardView.refreshCalendar();
-
-            DashboardView.updateSummaryCards();
-        });
 
         titleRow.getChildren().addAll(
                 spacer,
                 DashboardView.monthOverviewLabel,
                 prevButton,
-                nextButton,
-                backupButton,
-                restoreButton
+                nextButton
         );
 
         GridPane cardGrid = new GridPane();

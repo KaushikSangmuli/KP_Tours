@@ -78,6 +78,18 @@ public class DBInit {
 
                         ");";
 
+        String appSettingsTable =
+                "CREATE TABLE IF NOT EXISTS app_settings (" +
+
+                        "setting_key TEXT PRIMARY KEY," +
+
+                        "setting_value TEXT," +
+
+                        "created_at TEXT," +
+                        "updated_at TEXT" +
+
+                        ");";
+
         String idxAccountNo =
                 "CREATE INDEX IF NOT EXISTS idx_account_no " +
                         "ON accounts(account_no);";
@@ -124,6 +136,7 @@ public class DBInit {
 
             stmt.execute(documentsTable);
             stmt.execute(accountsTable);
+            stmt.execute(appSettingsTable);
 
             stmt.execute(idxTripDate);
             stmt.execute(idxPnr);

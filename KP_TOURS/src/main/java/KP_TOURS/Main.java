@@ -5,8 +5,10 @@ import KP_TOURS.cache.TripCacheManager;
 import KP_TOURS.db.DBInit;
 import KP_TOURS.maintenance.MaintenanceAccessManager;
 import KP_TOURS.maintenance.MaintenanceScreen;
+import KP_TOURS.repository.SettingsRepository;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.ui.dashboard.DashboardView;
+import KP_TOURS.ui.settings.AppSettings;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -19,6 +21,17 @@ public class Main extends Application {
     public void start(Stage stage) {
 
         DBInit.initialize();
+
+        SettingsRepository settingsRepository =
+                new SettingsRepository();
+
+        String businessName =
+                settingsRepository.getValue(
+                        "business_name",
+                        "KP Tours"
+                );
+
+        AppSettings.setBusinessName(businessName);
 
         TripRepository repository =
                 new TripRepository();

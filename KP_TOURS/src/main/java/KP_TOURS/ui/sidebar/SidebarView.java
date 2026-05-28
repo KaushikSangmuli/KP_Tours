@@ -2,6 +2,8 @@ package KP_TOURS.ui.sidebar;
 
 import KP_TOURS.ui.accounts.AccountView;
 import KP_TOURS.ui.dashboard.DashboardView;
+import KP_TOURS.ui.settings.AppSettings;
+import KP_TOURS.ui.settings.SettingsView;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -40,9 +42,14 @@ public class SidebarView {
         logo.setFitWidth(30);
         logo.setFitHeight(30);
         logo.setPreserveRatio(true);
-
-        Label title = new Label("KP Tours");
+        Label title = new Label();
+        title.textProperty().bind(
+                AppSettings.businessNameProperty()
+        );
+        title.setWrapText(true);
+        title.setMaxWidth(150);
         title.getStyleClass().add("sidebar-title");
+        title.setTranslateY(1);
         title.setTranslateY(1);
 
         branding.getChildren().addAll(
@@ -105,8 +112,12 @@ public class SidebarView {
         });
 
         settingsBtn.setOnAction(e -> {
+
             setActive(settingsBtn);
-            DashboardView.loadPlaceholderPage("Settings");
+
+            DashboardView.loadScreen(
+                    SettingsView.getView()
+            );
         });
 
         sidebar.getChildren().addAll(
