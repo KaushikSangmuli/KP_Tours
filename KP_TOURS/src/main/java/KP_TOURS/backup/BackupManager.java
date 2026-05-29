@@ -290,7 +290,7 @@ public class BackupManager {
 
                     if (tripRepository.exists(
                             conn,
-                            trip.getId()
+                            trip.getUuid()
                     )) {
 
                         success =
@@ -585,7 +585,7 @@ public class BackupManager {
         BackupData.TripBackupData data =
                 new BackupData.TripBackupData();
 
-        data.setId(trip.getId());
+        data.setId(trip.getUuid());
 
         data.setTripDate(
                 trip.getTripDate() == null

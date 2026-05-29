@@ -938,7 +938,7 @@ public class DashboardView {
 
             List<TripDocument> documents =
                     documentRepository.findByTripUuid(
-                            trip.getId()
+                            trip.getUuid()
                     );
 
             for (TripDocument document : documents) {
@@ -958,7 +958,7 @@ public class DashboardView {
             }
 
             documentRepository.deleteByTripUuid(
-                    trip.getId()
+                    trip.getUuid()
             );
 
             TripRepository tripRepository =
@@ -966,13 +966,13 @@ public class DashboardView {
 
             boolean deleted =
                     tripRepository.delete(
-                            trip.getId()
+                            trip.getUuid()
                     );
 
             if (deleted) {
 
                 TripCacheManager.removeTrip(
-                        trip.getId()
+                        trip.getUuid()
                 );
 
                 loadTripsForDate(selectedDate);
@@ -1116,7 +1116,7 @@ public class DashboardView {
         documentTable.setItems(
                 FXCollections.observableArrayList(
                         repository.findByTripUuid(
-                                trip.getId()
+                                trip.getUuid()
                         )
                 )
         );

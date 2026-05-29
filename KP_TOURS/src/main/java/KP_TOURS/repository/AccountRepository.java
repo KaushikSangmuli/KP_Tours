@@ -137,6 +137,61 @@ public class AccountRepository {
 
         return accounts;
     }
+
+
+    public List<Account> findAllDebtors() {
+
+        List<Account> accounts = new ArrayList<>();
+
+        String sql =
+                "SELECT * FROM accounts " +
+                        "WHERE LOWER(TRIM(account_group)) = 'debtor' " +
+                        "ORDER BY created_at DESC";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                accounts.add(mapAccount(rs));
+            }
+
+        } catch (Exception e) {
+            LoggerUtil.logError(e, "Failed to fetch debtors");
+        }
+
+        return accounts;
+    }
+
+    public List<Account> findAllCreditors() {
+
+        List<Account> accounts = new ArrayList<>();
+
+        String sql =
+                "SELECT * FROM accounts " +
+                        "WHERE LOWER(TRIM(account_group)) = 'creditor' " +
+                        "ORDER BY created_at DESC";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                accounts.add(mapAccount(rs));
+            }
+
+        } catch (Exception e) {
+            LoggerUtil.logError(e, "Failed to fetch creditors");
+        }
+
+        return accounts;
+    }
     public List<Account> searchByName(String keyword) {
 
         List<Account> accounts = new ArrayList<>();

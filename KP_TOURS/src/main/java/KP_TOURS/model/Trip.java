@@ -6,7 +6,9 @@ import java.util.UUID;
 
 public class Trip {
 
-    private final String id;
+    private Integer id;
+    private String uuid;
+    private String purchaseSalesUuid;
 
     private LocalDate tripDate;
 
@@ -29,37 +31,42 @@ public class Trip {
     private LocalDateTime updatedAt;
 
     public Trip() {
-
-        this.id = UUID.randomUUID().toString();
-
+        this.uuid = UUID.randomUUID().toString();
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-
         this.status = TripStatus.PENDING;
     }
 
-    // =========================================================
-    // Business Methods
-    // =========================================================
-
     public void calculateProfit() {
-
-        this.profit =
-                this.sellAmount - this.purchaseAmount;
+        this.profit = this.sellAmount - this.purchaseAmount;
     }
 
     public void touch() {
-
-        this.updatedAt =
-                LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
-    // =========================================================
-    // Getters and Setters
-    // =========================================================
-
-    public String getId() {
+    public Integer getId() {
         return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    public String getPurchaseSalesUuid() {
+        return purchaseSalesUuid;
+    }
+
+    public void setPurchaseSalesUuid(String purchaseSalesUuid) {
+        this.purchaseSalesUuid = purchaseSalesUuid;
     }
 
     public LocalDate getTripDate() {
@@ -99,9 +106,7 @@ public class Trip {
     }
 
     public void setSellAmount(double sellAmount) {
-
         this.sellAmount = sellAmount;
-
         calculateProfit();
     }
 
@@ -110,14 +115,16 @@ public class Trip {
     }
 
     public void setPurchaseAmount(double purchaseAmount) {
-
         this.purchaseAmount = purchaseAmount;
-
         calculateProfit();
     }
 
     public double getProfit() {
         return profit;
+    }
+
+    public void setProfit(double profit) {
+        this.profit = profit;
     }
 
     public String getBookedBy() {
@@ -149,7 +156,6 @@ public class Trip {
     }
 
     public void setDescription(String description) {
-
         this.description = description;
     }
 
@@ -157,19 +163,23 @@ public class Trip {
         return createdAt;
     }
 
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    // =========================================================
-    // Utility Methods
-    // =========================================================
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
     @Override
     public String toString() {
-
         return "Trip{" +
-                "id='" + id + '\'' +
+                "id=" + id +
+                ", uuid='" + uuid + '\'' +
                 ", name='" + name + '\'' +
                 ", sector='" + sector + '\'' +
                 ", airlineName='" + airlineName + '\'' +

@@ -387,7 +387,7 @@ public class TripFormDialog {
                                 new TripDocument();
 
                         document.setTripUuid(
-                                trip.getId()
+                                trip.getUuid()
                         );
 
                         document.setFileName(

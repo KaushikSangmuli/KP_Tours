@@ -13,10 +13,59 @@ public class DBInit {
 
         createApplicationDirectories();
 
+        String purchaseSalesTable =
+                "CREATE TABLE IF NOT EXISTS purchase_sales (" +
+
+                        "uuid TEXT PRIMARY KEY," +
+
+                        "bill_no TEXT UNIQUE NOT NULL," +
+
+                        "entry_date TEXT NOT NULL," +
+
+                        "purchase_type TEXT NOT NULL," +
+
+                        "purchase_from TEXT," +
+                        "customer_uuid TEXT," +
+
+                        "description TEXT," +
+                        "purchase_remark TEXT," +
+                        "sales_remark TEXT," +
+
+                        "qty INTEGER DEFAULT 1," +
+
+                        "purchase_rate REAL DEFAULT 0," +
+                        "sell_rate REAL DEFAULT 0," +
+
+                        "total_purchase REAL DEFAULT 0," +
+                        "total_sale REAL DEFAULT 0," +
+                        "profit REAL DEFAULT 0," +
+
+                        "payment_mode TEXT," +
+
+                        "pnr_no TEXT," +
+                        "sector TEXT," +
+                        "airline_name TEXT," +
+                        "travel_date TEXT," +
+
+                        "linked_trip_uuid TEXT," +
+
+                        "status TEXT DEFAULT 'ACTIVE'," +
+
+                        "created_at TEXT," +
+                        "updated_at TEXT" +
+
+                        ");";
+
+
+
         String tripsTable =
                 "CREATE TABLE IF NOT EXISTS trips (" +
 
-                        "id TEXT PRIMARY KEY," +
+                        "uuid TEXT PRIMARY KEY," +
+
+                        "id INTEGER UNIQUE," +
+
+                        "purchase_sales_uuid TEXT," +
 
                         "trip_date TEXT NOT NULL," +
 
@@ -41,7 +90,6 @@ public class DBInit {
                         "updated_at TEXT" +
 
                         ");";
-
         String documentsTable =
                 "CREATE TABLE IF NOT EXISTS documents (" +
 
@@ -90,6 +138,22 @@ public class DBInit {
 
                         ");";
 
+        String idxPurchaseSalesDate =
+                "CREATE INDEX IF NOT EXISTS idx_purchase_sales_date " +
+                        "ON purchase_sales(entry_date);";
+
+        String idxPurchaseSalesBillNo =
+                "CREATE INDEX IF NOT EXISTS idx_purchase_sales_bill_no " +
+                        "ON purchase_sales(bill_no);";
+
+        String idxPurchaseSalesCustomer =
+                "CREATE INDEX IF NOT EXISTS idx_purchase_sales_customer " +
+                        "ON purchase_sales(customer_uuid);";
+
+        String idxPurchaseSalesTrip =
+                "CREATE INDEX IF NOT EXISTS idx_purchase_sales_trip " +
+                        "ON purchase_sales(linked_trip_uuid);";
+
         String idxAccountNo =
                 "CREATE INDEX IF NOT EXISTS idx_account_no " +
                         "ON accounts(account_no);";
@@ -137,7 +201,7 @@ public class DBInit {
             stmt.execute(documentsTable);
             stmt.execute(accountsTable);
             stmt.execute(appSettingsTable);
-
+            stmt.execute(purchaseSalesTable);
             stmt.execute(idxTripDate);
             stmt.execute(idxPnr);
             stmt.execute(idxName);
@@ -146,6 +210,10 @@ public class DBInit {
             stmt.execute(idxAccountNo);
             stmt.execute(idxAccountName);
             stmt.execute(idxAccountGroup);
+            stmt.execute(idxPurchaseSalesDate);
+            stmt.execute(idxPurchaseSalesBillNo);
+            stmt.execute(idxPurchaseSalesCustomer);
+            stmt.execute(idxPurchaseSalesTrip);
 
             LoggerUtil.logInfo("Database initialized successfully");
 

@@ -2,6 +2,7 @@ package KP_TOURS.ui.sidebar;
 
 import KP_TOURS.ui.accounts.AccountView;
 import KP_TOURS.ui.dashboard.DashboardView;
+import KP_TOURS.ui.purchasesales.PurchaseSalesView;
 import KP_TOURS.ui.settings.AppSettings;
 import KP_TOURS.ui.settings.SettingsView;
 import javafx.geometry.Insets;
@@ -98,7 +99,7 @@ public class SidebarView {
 
         purchaseSalesBtn.setOnAction(e -> {
             setActive(purchaseSalesBtn);
-            DashboardView.loadPlaceholderPage("Purchases & Sales");
+            DashboardView.loadScreen(PurchaseSalesView.getView());
         });
 
         creditNotesBtn.setOnAction(e -> {
