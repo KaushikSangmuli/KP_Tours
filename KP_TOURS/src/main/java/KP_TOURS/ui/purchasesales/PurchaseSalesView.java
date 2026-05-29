@@ -439,13 +439,24 @@ public class PurchaseSalesView {
                 boolean tripSaved =
                         tripRepository.save(trip);
 
+                System.out.println("Trip saved = " + tripSaved);
+                System.out.println("Trip UUID = " + trip.getUuid());
+                System.out.println("PurchaseSales UUID = " + ps.getUuid());
+
                 if (tripSaved) {
+
                     ps.setLinkedTripUuid(trip.getUuid());
+
                     purchaseSalesRepository.update(ps);
 
                     TripCacheManager.initialize(
                             tripRepository.findAll()
                     );
+
+                } else {
+
+                    alert("Purchase/Sales saved, but calendar trip was not created.");
+                    return;
                 }
             }
 
