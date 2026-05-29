@@ -283,6 +283,11 @@ public class AccountView {
                 groupBox.getSelectionModel()
                         .clearSelection();
 
+                DashboardView.loadScreen(
+                        AccountView.getView()
+                );
+
+
             } else {
 
                 alert("Failed to save account");

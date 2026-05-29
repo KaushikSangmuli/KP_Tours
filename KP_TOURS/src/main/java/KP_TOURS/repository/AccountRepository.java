@@ -268,27 +268,26 @@ public class AccountRepository {
     private String generateAccountNo() {
 
         String sql =
-                "SELECT COUNT(*) FROM accounts";
+                "SELECT COALESCE(MAX(CAST(account_no AS INTEGER)),0) + 1 " +
+                        "FROM accounts";
 
         try (
                 Connection conn = DBConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)
         ) {
 
-            var rs = stmt.executeQuery();
+            ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
 
-                int next =
-                        rs.getInt(1) + 1;
-
-                return String.format(
-                        "%0d",
-                        next
+                return String.valueOf(
+                        rs.getInt(1)
                 );
             }
 
         } catch (Exception e) {
+
+            e.printStackTrace();
 
             LoggerUtil.logError(
                     e,
@@ -296,8 +295,11 @@ public class AccountRepository {
             );
         }
 
-        return "ACC-0001";
+        return String.valueOf(
+                System.currentTimeMillis()
+        );
     }
+
     public boolean update(Account account) {
 
         String sql =
