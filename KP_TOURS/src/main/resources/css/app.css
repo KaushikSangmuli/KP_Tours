@@ -453,3 +453,49 @@
     -fx-font-weight: 800;
     -fx-background-radius: 12px;
 }
+
+.promotion-bar {
+    -fx-background-color: linear-gradient(to right, #eef2ff, #f8fafc);
+    -fx-border-color: #dbeafe;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-padding: 14px 18px;
+}
+
+.promotion-text {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1e293b;
+}
+
+.promotion-contact {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #2563eb;
+}
+
+.premium-action-button {
+    -fx-background-color: linear-gradient(to right, #2563eb, #1d4ed8);
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-background-radius: 14px;
+    -fx-cursor: hand;
+    -fx-padding: 0 22px;
+}
+
+.premium-action-button:hover {
+    -fx-background-color: linear-gradient(to right, #1d4ed8, #1e40af);
+    -fx-translate-y: -1px;
+}
+
+.backup-main-text {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #0f172a;
+}
+
+.backup-sub-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #64748b;
+}

@@ -152,41 +152,88 @@ public class SettingsView {
         backupSubtitle.getStyleClass()
                 .add("section-subtitle");
 
-        HBox backupActions = new HBox(12);
+        HBox backupActions = new HBox(16);
 
         Button backupBtn =
-                new Button("Backup Now");
+                new Button("Create Backup");
 
-        backupBtn.getStyleClass().add("secondary-button");
+        backupBtn.getStyleClass().add("premium-action-button");
+
+        backupBtn.setPrefHeight(46);
+        backupBtn.setPrefWidth(180);
 
         backupBtn.setOnAction(e ->
                 BackupManager.createBackup()
         );
 
         Button restoreBtn =
-                new Button("Restore Backup");
+                new Button("Restore Data");
 
-        restoreBtn.getStyleClass().add("secondary-button");
+        restoreBtn.getStyleClass().add("premium-action-button");
+
+        restoreBtn.setPrefHeight(46);
+        restoreBtn.setPrefWidth(180);
 
         restoreBtn.setOnAction(e ->
                 BackupManager.restoreBackup()
         );
 
-        backupActions.getChildren().addAll(
-                backupBtn,
-                restoreBtn
+        VBox backupInfo = new VBox(6);
+
+        Label backupMain =
+                new Label("Automatic daily backups are enabled");
+
+        backupMain.getStyleClass().add("backup-main-text");
+
+        Label backupSub =
+                new Label(
+                        "Your application data is securely stored and can be restored anytime."
+                );
+
+        backupSub.getStyleClass().add("backup-sub-text");
+
+        backupInfo.getChildren().addAll(
+                backupMain,
+                backupSub
         );
 
+        backupActions.getChildren().addAll(
+                backupBtn,
+                restoreBtn,
+                backupInfo
+        );
         backupCard.getChildren().addAll(
                 backupTitle,
                 backupSubtitle,
                 backupActions
         );
 
+        HBox promotionBar = new HBox(12);
+        promotionBar.setAlignment(Pos.CENTER_LEFT);
+        promotionBar.getStyleClass().add("promotion-bar");
+
+        Label promoText = new Label(
+                "Powered by AK Web Solutions  •  For support, upgrades & custom software development"
+        );
+        promoText.getStyleClass().add("promotion-text");
+
+        Region promoSpacer = new Region();
+        HBox.setHgrow(promoSpacer, Priority.ALWAYS);
+
+        Label contactText = new Label("Contact:ITSupport@akwebsolutions.com");
+        contactText.getStyleClass().add("promotion-contact");
+
+        promotionBar.getChildren().addAll(
+                promoText,
+                promoSpacer,
+                contactText
+        );
+
         root.getChildren().addAll(
                 title,
                 businessCard,
-                backupCard
+                backupCard,
+                promotionBar
         );
 
         return root;

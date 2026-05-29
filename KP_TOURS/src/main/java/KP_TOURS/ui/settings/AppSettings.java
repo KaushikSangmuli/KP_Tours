@@ -22,7 +22,7 @@ public class AppSettings {
     public static void setBusinessName(String name) {
 
         if (name == null || name.isBlank()) {
-            businessName.set("KP Tours");
+            businessName.set("Admin");
             return;
         }
 
