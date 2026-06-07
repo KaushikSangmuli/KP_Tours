@@ -63,6 +63,7 @@ public class PurchaseSalesRepository {
 
         } catch (Exception e) {
             LoggerUtil.logError(e, "Failed while saving purchase/sales entry");
+            e.printStackTrace();
             return false;
         }
     }

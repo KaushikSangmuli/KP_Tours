@@ -1,7 +1,9 @@
 package KP_TOURS.ui.purchasesales;
 
-import KP_TOURS.model.Account;
+import KP_TOURS.model.*;
 import KP_TOURS.repository.AccountRepository;
+import KP_TOURS.repository.TripDocumentRepository;
+import KP_TOURS.ui.dashboard.DashboardView;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -9,15 +11,19 @@ import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import KP_TOURS.cache.TripCacheManager;
-import KP_TOURS.model.PurchaseSales;
-import KP_TOURS.model.Trip;
-import KP_TOURS.model.TripStatus;
 import KP_TOURS.repository.PurchaseSalesRepository;
 import KP_TOURS.repository.TripRepository;
+import javafx.stage.FileChooser;
 import org.controlsfx.control.SearchableComboBox;
 
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PurchaseSalesView {
 
@@ -57,6 +63,14 @@ public class PurchaseSalesView {
 
         Button showEntriesBtn = new Button("Show Entries");
         showEntriesBtn.getStyleClass().add("secondary-button");
+
+        showEntriesBtn.setOnAction(e -> {
+            System.out.println("Show Entries clicked");
+
+            DashboardView.loadScreen(
+                    PurchaseSalesListView.getView()
+            );
+        });
 
         header.getChildren().addAll(titleBox, spacer, showEntriesBtn);
 
@@ -218,6 +232,34 @@ public class PurchaseSalesView {
         TextField airlineField = input("Airline name");
         TextField pnrField = input("PNR / Reference No");
 
+        List<File> selectedDocuments = new ArrayList<>();
+
+        Button uploadDocsBtn = new Button("Upload Documents");
+        uploadDocsBtn.getStyleClass().add("secondary-button");
+
+        Label selectedDocsLabel = new Label("No documents selected");
+        selectedDocsLabel.getStyleClass().add("section-subtitle");
+
+        uploadDocsBtn.setOnAction(e -> {
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Select Flight Documents");
+
+            List<File> files =
+                    fileChooser.showOpenMultipleDialog(null);
+
+            if (files == null || files.isEmpty()) {
+                return;
+            }
+
+            selectedDocuments.clear();
+            selectedDocuments.addAll(files);
+
+            selectedDocsLabel.setText(
+                    selectedDocuments.size() + " document(s) selected"
+            );
+        });
+
         flightGrid.add(label("Travel Date"), 0, 0);
         flightGrid.add(travelDate, 1, 0);
 
@@ -229,6 +271,12 @@ public class PurchaseSalesView {
 
         flightGrid.add(label("PNR No"), 2, 1);
         flightGrid.add(pnrField, 3, 1);
+
+        flightGrid.add(label("Documents"), 0, 2);
+        flightGrid.add(uploadDocsBtn, 1, 2);
+        flightGrid.add(selectedDocsLabel, 2, 2, 2, 1);
+
+
 
         flightCard.getChildren().add(flightGrid);
 
@@ -366,7 +414,7 @@ public class PurchaseSalesView {
 
             ps.setEntryDate(entryDate.getValue());
             ps.setPurchaseType(typeBox.getValue());
-            ps.setPurchaseFrom(purchaseFromField.getText().trim());
+            ps.setPurchaseFrom(bankCreditBox.getValue().getUuid());
             ps.setCustomerUuid(
                     customerBox.getValue() != null
                             ? customerBox.getValue().getUuid()
@@ -391,13 +439,21 @@ public class PurchaseSalesView {
             PurchaseSalesRepository purchaseSalesRepository =
                     new PurchaseSalesRepository();
 
+            System.out.println("=================================");
+            System.out.println("UUID           = " + ps.getUuid());
+            System.out.println("BILL NO        = " + ps.getBillNo());
+            System.out.println("PURCHASE FROM  = " + ps.getPurchaseFrom());
+            System.out.println("CUSTOMER UUID  = " + ps.getCustomerUuid());
+            System.out.println("PAYMENT MODE   = " + ps.getPaymentMode());
+            System.out.println("=================================");
+
             boolean saved =
                     purchaseSalesRepository.save(ps);
-
             if (!saved) {
                 alert("Failed to save purchase/sales entry");
                 return;
             }
+
 
             billNoLabel.setText(ps.getBillNo());
 
@@ -448,6 +504,61 @@ public class PurchaseSalesView {
                     ps.setLinkedTripUuid(trip.getUuid());
 
                     purchaseSalesRepository.update(ps);
+
+                    try {
+
+                        TripDocumentRepository tripDocumentRepository =
+                                new TripDocumentRepository();
+
+                        for (File file : selectedDocuments) {
+
+                            Path uploadDir =
+                                    Path.of(
+                                            System.getProperty("user.home"),
+                                            "PrabalAppData",
+                                            "uploads"
+                                    );
+
+                            Files.createDirectories(uploadDir);
+
+                            String safeFileName =
+                                    System.currentTimeMillis()
+                                            + "_"
+                                            + file.getName();
+
+                            Path targetPath =
+                                    uploadDir.resolve(safeFileName);
+
+                            Files.copy(
+                                    file.toPath(),
+                                    targetPath,
+                                    StandardCopyOption.REPLACE_EXISTING
+                            );
+
+                            TripDocument document =
+                                    new TripDocument();
+
+                            document.setTripUuid(
+                                    trip.getUuid()
+                            );
+
+                            document.setFileName(
+                                    file.getName()
+                            );
+
+                            document.setFilePath(
+                                    targetPath.toString()
+                            );
+
+                            tripDocumentRepository.save(document);
+                        }
+
+                    } catch (Exception ex) {
+
+                        ex.printStackTrace();
+
+                        alert("Trip created, but document upload failed.");
+                    }
 
                     TripCacheManager.initialize(
                             tripRepository.findAll()

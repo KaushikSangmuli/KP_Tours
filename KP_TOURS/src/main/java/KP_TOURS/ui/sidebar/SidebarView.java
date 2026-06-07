@@ -2,6 +2,7 @@ package KP_TOURS.ui.sidebar;
 
 import KP_TOURS.ui.accounts.AccountView;
 import KP_TOURS.ui.dashboard.DashboardView;
+import KP_TOURS.ui.paymentsreceive.PayReceiveView;
 import KP_TOURS.ui.purchasesales.PurchaseSalesView;
 import KP_TOURS.ui.settings.AppSettings;
 import KP_TOURS.ui.settings.SettingsView;
@@ -92,10 +93,6 @@ public class SidebarView {
 
         });
 
-        payRecBtn.setOnAction(e -> {
-            setActive(payRecBtn);
-            DashboardView.loadPlaceholderPage("Payables & Receivables");
-        });
 
         purchaseSalesBtn.setOnAction(e -> {
             setActive(purchaseSalesBtn);
@@ -110,6 +107,11 @@ public class SidebarView {
         trialBalanceBtn.setOnAction(e -> {
             setActive(trialBalanceBtn);
             DashboardView.loadPlaceholderPage("Trial Balance");
+        });
+
+        payRecBtn.setOnAction(e -> {
+            setActive(payRecBtn);
+            DashboardView.loadScreen(PayReceiveView.getView());
         });
 
         settingsBtn.setOnAction(e -> {

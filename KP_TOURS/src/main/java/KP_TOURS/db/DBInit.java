@@ -138,6 +138,43 @@ public class DBInit {
 
                         ");";
 
+
+        String payReceiveTable =
+                "CREATE TABLE IF NOT EXISTS pay_receive (" +
+                        "uuid TEXT PRIMARY KEY," +
+                        "voucher_no TEXT UNIQUE NOT NULL," +
+                        "entry_type TEXT NOT NULL," + // PAY / RECEIVE
+                        "entry_date TEXT NOT NULL," +
+
+                        "account_uuid TEXT NOT NULL," +
+                        "payment_mode TEXT NOT NULL," +
+
+                        "total_amount REAL NOT NULL," +
+
+                        "reference_no TEXT," +
+                        "remark TEXT," +
+
+                        "created_at TEXT," +
+                        "updated_at TEXT" +
+                        ");";
+
+        String payReceiveBillAdjustmentTable =
+                "CREATE TABLE IF NOT EXISTS pay_receive_bill_adjustment (" +
+                        "uuid TEXT PRIMARY KEY," +
+
+                        "pay_receive_uuid TEXT NOT NULL," +
+                        "purchase_sales_uuid TEXT NOT NULL," +
+
+                        "bill_no TEXT," +
+                        "adjusted_amount REAL NOT NULL," +
+
+                        "created_at TEXT," +
+                        "updated_at TEXT" +
+                        ");";
+
+
+
+
         String idxPurchaseSalesDate =
                 "CREATE INDEX IF NOT EXISTS idx_purchase_sales_date " +
                         "ON purchase_sales(entry_date);";
@@ -198,6 +235,9 @@ public class DBInit {
                     "TEXT"
             );
 
+
+            stmt.execute(payReceiveTable);
+            stmt.execute(payReceiveBillAdjustmentTable);
             stmt.execute(documentsTable);
             stmt.execute(accountsTable);
             stmt.execute(appSettingsTable);
