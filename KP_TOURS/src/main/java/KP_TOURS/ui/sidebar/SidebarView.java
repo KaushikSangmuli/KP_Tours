@@ -1,14 +1,18 @@
 package KP_TOURS.ui.sidebar;
 
+import KP_TOURS.ui.accountledger.AccountLedgerView;
 import KP_TOURS.ui.accounts.AccountView;
 import KP_TOURS.ui.dashboard.DashboardView;
 import KP_TOURS.ui.paymentsreceive.PayReceiveView;
 import KP_TOURS.ui.purchasesales.PurchaseSalesView;
 import KP_TOURS.ui.settings.AppSettings;
 import KP_TOURS.ui.settings.SettingsView;
+import KP_TOURS.util.SvgIconUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -41,8 +45,8 @@ public class SidebarView {
         )
         );
 
-        logo.setFitWidth(30);
-        logo.setFitHeight(30);
+        logo.setFitWidth(70);
+        logo.setFitHeight(90);
         logo.setPreserveRatio(true);
         Label title = new Label();
         title.textProperty().bind(
@@ -59,18 +63,49 @@ public class SidebarView {
                 title
         );
 
-        Button calendarBtn = createSidebarButton("📅 Calendar");
-        Button ledgerBtn = createSidebarButton("📒 A/C Ledger");
-        Button accountsBtn = createSidebarButton("👤 Accounts");
-        Button payRecBtn = createSidebarButton("💳 Payables & Receivables");
-        Button purchaseSalesBtn = createSidebarButton("🛒 Purchases & Sales");
-        Button creditNotesBtn = createSidebarButton("🧾 Credit Notes");
-        Button trialBalanceBtn = createSidebarButton("⚖ Trial Balance");
+        Button calendarBtn = createSidebarButton(
+                "Calendar",
+                SvgIconUtil.loadIcon("/icons/calendar.png", 18)
+        );
+
+        Button ledgerBtn = createSidebarButton(
+                "A/C Ledger",
+                SvgIconUtil.loadIcon("/icons/ledger.png", 18)
+        );
+
+        Button accountsBtn = createSidebarButton(
+                "Accounts",
+                SvgIconUtil.loadIcon("/icons/accounts.png", 18)
+        );
+
+        Button payRecBtn = createSidebarButton(
+                "Payables & Receivables",
+                SvgIconUtil.loadIcon("/icons/payables.png", 18)
+        );
+
+        Button purchaseSalesBtn = createSidebarButton(
+                "Purchases & Sales",
+                SvgIconUtil.loadIcon("/icons/purchase.png", 18)
+        );
+
+        Button creditNotesBtn = createSidebarButton(
+                "Credit Notes",
+                SvgIconUtil.loadIcon("/icons/note.png", 18)
+        );
+
+        Button trialBalanceBtn = createSidebarButton(
+                "Trial Balance",
+                SvgIconUtil.loadIcon("/icons/trialbalance.png", 18)
+        );
+
+        Button settingsBtn = createSidebarButton(
+                "Settings",
+                SvgIconUtil.loadIcon("/icons/settings.png", 18)
+        );
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        Button settingsBtn = createSidebarButton("⚙ Settings");
 
         calendarBtn.setOnAction(e -> {
 
@@ -87,10 +122,10 @@ public class SidebarView {
         });
 
         ledgerBtn.setOnAction(e -> {
-
             setActive(ledgerBtn);
-            DashboardView.loadPlaceholderPage("A/C Ledger");
-
+            DashboardView.loadScreen(
+                    AccountLedgerView.getView()
+            );
         });
 
 
@@ -113,6 +148,8 @@ public class SidebarView {
             setActive(payRecBtn);
             DashboardView.loadScreen(PayReceiveView.getView());
         });
+
+
 
         settingsBtn.setOnAction(e -> {
 
@@ -141,15 +178,22 @@ public class SidebarView {
     }
 
 
+    private static Button createSidebarButton(String text, Node icon) {
 
-    private static Button createSidebarButton(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-text-fill: white; -fx-font-size: 13px;");
 
-        Button button = new Button(text);
-        button.setMaxWidth(Double.MAX_VALUE);
-        button.setAlignment(Pos.CENTER_LEFT);
-        button.getStyleClass().add("sidebar-button");
+        HBox content = new HBox(10);
+        content.setAlignment(Pos.CENTER_LEFT);
+        content.getChildren().addAll(icon, label);
 
-        return button;
+        Button btn = new Button();
+        btn.setGraphic(content);
+
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.setStyle("-fx-background-color: transparent; -fx-padding: 10 15;");
+
+        return btn;
     }
 
     private static void setActive(Button selectedButton) {
