@@ -72,6 +72,8 @@ public class Main extends Application {
                         900
                 );
 
+
+        DashboardView.attachKeyboard(scene);   // 👈 ADD THIS
         scene.getStylesheets().add(
                 getClass()
                         .getResource("/css/app.css")

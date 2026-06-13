@@ -25,17 +25,6 @@ import java.util.List;
 
 public class TripFormDialog {
 
-    public static void openAddDialog(
-            LocalDate selectedDate,
-            Runnable refreshCallback
-    ) {
-
-        openDialog(
-                null,
-                selectedDate,
-                refreshCallback
-        );
-    }
 
     public static void openEditDialog(
             Trip trip,

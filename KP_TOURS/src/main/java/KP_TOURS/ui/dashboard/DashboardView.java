@@ -10,6 +10,7 @@ import KP_TOURS.repository.TripRepository;
 import KP_TOURS.ui.accounts.AccountView;
 import KP_TOURS.ui.sidebar.SidebarView;
 import KP_TOURS.ui.trip.TripFormDialog;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -32,6 +33,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +43,7 @@ public class DashboardView {
 
     private static final GridPane calendarGrid = new GridPane();
     private static final TableView<Trip> tripTable = new TableView<>();
+    private static VBox calendarRoot;
 
     private static final Label monthLabel = new Label();
     public static final Label monthOverviewLabel = new Label();
@@ -57,6 +60,11 @@ public class DashboardView {
 
     private static final StackPane contentArea = new StackPane();
     private static boolean profitVisible = false;
+
+    private static final List<LocalDate> calendarDates = new ArrayList<>();
+    private static int selectedIndex = 0;
+    private static boolean dateLocked = false;
+
 
     public static Parent getView() {
 
@@ -82,6 +90,9 @@ public class DashboardView {
         initializeTable();
         loadTripsForDate(selectedDate);
         updateSummaryCards();
+
+        // attach keyboard AFTER UI is ready
+        Platform.runLater(() -> root.requestFocus());
 
         return root;
     }
@@ -132,7 +143,7 @@ public class DashboardView {
                 "Total Profit",
                 totalProfitLabel
         );
-        VBox card5 = summaryCard("pending.png", "Pending", pendingTripsLabel);
+
         VBox card6 = summaryCard("cancelled.png", "Cancelled", cancelledTripsLabel);
 
         VBox[] cards = {
@@ -140,7 +151,6 @@ public class DashboardView {
                 card2,
                 card3,
                 card4,
-                card5,
                 card6
         };
 
@@ -200,6 +210,7 @@ public class DashboardView {
                 tripSection
         );
 
+
         return center;
     }
 
@@ -207,7 +218,13 @@ public class DashboardView {
 
         VBox root = new VBox(18);
         root.getStyleClass().add("premium-panel");
+        root.setFocusTraversable(true);
         root.setPrefWidth(470);
+
+        calendarRoot = root;
+
+        root.setOnMouseClicked(e -> root.requestFocus());
+
 
         Label title = new Label("Calendar");
         title.getStyleClass().add("section-title");
@@ -233,11 +250,7 @@ public class DashboardView {
             updateSummaryCards();
         });
 
-        controls.getChildren().addAll(
-                prev,
-                monthLabel,
-                next
-        );
+        controls.getChildren().addAll(prev, monthLabel, next);
 
         calendarGrid.setHgap(0);
         calendarGrid.setVgap(0);
@@ -246,14 +259,58 @@ public class DashboardView {
         Label hint = new Label("● Dots indicate number of trips on that day");
         hint.getStyleClass().add("calendar-hint");
 
-        root.getChildren().addAll(
-                title,
-                controls,
-                calendarGrid,
-                hint
-        );
+        root.getChildren().addAll(title, controls, calendarGrid, hint);
+
+        Platform.runLater(root::requestFocus);
 
         return root;
+    }
+
+    private static void moveDate(int delta) {
+
+        if (calendarDates.isEmpty()) return;
+
+        int newIndex = selectedIndex;
+
+        switch (delta) {
+
+            case 1 -> newIndex = selectedIndex + 1;   // RIGHT
+            case -1 -> newIndex = selectedIndex - 1;  // LEFT
+            case 7 -> newIndex = selectedIndex + 7;   // DOWN
+            case -7 -> newIndex = selectedIndex - 7;  // UP
+        }
+
+        // boundary checks
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex >= calendarDates.size())
+            newIndex = calendarDates.size() - 1;
+
+        selectedIndex = newIndex;
+        selectedDate = calendarDates.get(selectedIndex);
+
+        loadTripsForDate(selectedDate);
+        refreshCalendar();
+    }
+
+    private static void unlockDate() {
+
+        dateLocked = false;
+
+        loadTripsForDate(selectedDate);
+
+        refreshCalendar();
+    }
+
+    // ✅ Fix lockDate() — after locking, move focus to the trip table
+    private static void lockDate() {
+
+        dateLocked = true;
+        selectedDate = calendarDates.get(selectedIndex);
+        loadTripsForDate(selectedDate);
+        refreshCalendar();
+
+        // Move focus to trip table so Enter doesn't re-trigger calendar
+        Platform.runLater(() -> tripTable.requestFocus());
     }
 
     private static VBox buildTripSection() {
@@ -269,6 +326,16 @@ public class DashboardView {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // Add this in buildTripSection() right after globalSearchField is defined
+        globalSearchField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                e.consume();
+                globalSearchField.clear();
+                globalSearchMode = false;
+                loadTripsForDate(selectedDate);
+                Platform.runLater(() -> calendarRoot.requestFocus());
+            }
+        });
         globalSearchField.setPromptText("Search All Trips...");
         globalSearchField.getStyleClass().add("premium-search");
         globalSearchField.setPrefWidth(250);
@@ -285,20 +352,11 @@ public class DashboardView {
             searchGlobally(newVal);
         });
 
-        Button addTripButton = new Button("+ Add Trip");
-        addTripButton.getStyleClass().add("primary-button");
-
-        addTripButton.setOnAction(e -> TripFormDialog.openAddDialog(selectedDate, () -> {
-            loadTripsForDate(selectedDate);
-            refreshCalendar();
-            updateSummaryCards();
-        }));
 
         top.getChildren().addAll(
                 selectedDateLabel,
                 spacer,
-                globalSearchField,
-                addTripButton
+                globalSearchField
         );
 
         localSearchField.setPromptText("Search Selected Date Trips...");
@@ -333,6 +391,7 @@ public class DashboardView {
 
     public static void refreshCalendar() {
 
+        calendarDates.clear();
         calendarGrid.getChildren().clear();
 
         monthLabel.setText(
@@ -372,6 +431,7 @@ public class DashboardView {
         for (int day = 1; day <= daysInMonth; day++) {
 
             LocalDate date = currentMonth.atDay(day);
+            calendarDates.add(date);
 
             VBox cell = buildCalendarCell(date);
 
@@ -383,6 +443,18 @@ public class DashboardView {
                 col = 0;
                 row++;
             }
+        }
+        if (!calendarDates.isEmpty()) {
+
+            if (selectedIndex < 0 || selectedIndex >= calendarDates.size()) {
+                selectedIndex = 0;
+            }
+
+            selectedDate = calendarDates.get(selectedIndex);
+        }
+
+        if (calendarRoot != null) {
+            Platform.runLater(() -> calendarRoot.requestFocus());
         }
     }
 
@@ -401,9 +473,13 @@ public class DashboardView {
         }
 
         if (date.equals(selectedDate)) {
-            cell.getStyleClass().add("calendar-selected");
-        }
 
+            if (dateLocked) {
+                cell.getStyleClass().add("calendar-locked");
+            } else {
+                cell.getStyleClass().add("calendar-selected");
+            }
+        }
         Label dateLabel = new Label(String.valueOf(date.getDayOfMonth()));
         dateLabel.getStyleClass().add("calendar-date");
 
@@ -430,13 +506,80 @@ public class DashboardView {
         }
 
         cell.setOnMouseClicked(e -> {
+
             selectedDate = date;
+            selectedIndex = calendarDates.indexOf(date);
+
             loadTripsForDate(date);
             refreshCalendar();
+
         });
 
         return cell;
     }
+
+    // ✅ KEEP THIS — the only keyboard handler needed
+// Also added: Ctrl+F to focus global search
+    public static void attachKeyboard(Scene scene) {
+
+        scene.setOnKeyPressed(e -> {
+
+            // Ctrl+F → focus global search field
+            if (e.isControlDown() && e.getCode() == javafx.scene.input.KeyCode.F) {
+                e.consume();
+                globalSearchField.requestFocus();
+                globalSearchField.selectAll();
+                return;
+            }
+
+            if (calendarDates.isEmpty()) return;
+
+            // Ignore arrow/enter/esc if a text field is focused
+            javafx.scene.Node focused = scene.getFocusOwner();
+            if (focused instanceof TextField) return;
+
+            switch (e.getCode()) {
+
+                case RIGHT -> {
+                    e.consume();
+                    moveDate(1);
+                }
+                case LEFT -> {
+                    e.consume();
+                    moveDate(-1);
+                }
+                case DOWN -> {
+                    e.consume();
+                    moveDate(7);
+                }
+                case UP -> {
+                    e.consume();
+                    moveDate(-7);
+                }
+                case ENTER -> {
+                    e.consume();
+                    lockDate();
+                }
+                case ESCAPE -> {
+                    e.consume();
+
+                    // If global search has text OR is currently focused
+                    if (!globalSearchField.getText().isBlank() || globalSearchField.isFocused()) {
+                        globalSearchField.clear();
+                        globalSearchMode = false;
+                        loadTripsForDate(selectedDate);
+                        Platform.runLater(() -> calendarRoot.requestFocus());
+                        return;
+                    }
+
+                    unlockDate();
+                    Platform.runLater(() -> calendarRoot.requestFocus());
+                }
+            }
+        });
+    }
+
+
 
     private static void initializeTable() {
 
@@ -481,9 +624,6 @@ public class DashboardView {
         sellAmount.setCellValueFactory(cell ->
                 new SimpleObjectProperty<>(cell.getValue().getSellAmount())
         );
-
-        TableColumn<Trip, Void> action = new TableColumn<>("Actions");
-
         name.setPrefWidth(150);
         sector.setPrefWidth(130);
         airline.setPrefWidth(150);
@@ -491,74 +631,7 @@ public class DashboardView {
         bookedBy.setPrefWidth(100);
         status.setPrefWidth(110);
         sellAmount.setPrefWidth(110);
-        action.setPrefWidth(250);
 
-        action.setCellFactory(param -> new TableCell<>() {
-
-            private final Button editButton = new Button("Edit");
-            private final Button deleteButton = new Button("Delete");
-            private final Button viewButton = new Button("View");
-
-            private final HBox box = new HBox(
-                    8,
-                    editButton,
-                    deleteButton,
-                    viewButton
-            );
-
-            {
-                box.setAlignment(Pos.CENTER_LEFT);
-
-                editButton.getStyleClass().add("table-action-button");
-                deleteButton.getStyleClass().add("table-action-button");
-                viewButton.getStyleClass().add("table-action-button");
-
-                editButton.setOnAction(event -> {
-
-                    Trip trip =
-                            getTableView()
-                                    .getItems()
-                                    .get(getIndex());
-
-                    TripFormDialog.openEditDialog(trip, () -> {
-                        loadTripsForDate(selectedDate);
-                        refreshCalendar();
-                        updateSummaryCards();
-                    });
-                });
-
-                deleteButton.setOnAction(event -> {
-
-                    Trip trip =
-                            getTableView()
-                                    .getItems()
-                                    .get(getIndex());
-
-                    deleteTrip(trip);
-                });
-
-                viewButton.setOnAction(event -> {
-
-                    Trip trip =
-                            getTableView()
-                                    .getItems()
-                                    .get(getIndex());
-
-                    openDocumentListDialog(trip);
-                });
-            }
-
-            @Override
-            protected void updateItem(
-                    Void item,
-                    boolean empty
-            ) {
-
-                super.updateItem(item, empty);
-
-                setGraphic(empty ? null : box);
-            }
-        });
 
         tripTable.getColumns().addAll(
                 name,
@@ -567,8 +640,7 @@ public class DashboardView {
                 pnr,
                 bookedBy,
                 status,
-                sellAmount,
-                action
+                sellAmount
         );
 
         tripTable.setItems(
@@ -635,13 +707,7 @@ public class DashboardView {
 
         totalPurchaseLabel.setTooltip(new Tooltip(totalPurchase));
         updateProfitVisibility();
-        long pendingCount =
-                monthlyTrips.stream()
-                        .filter(trip ->
-                                trip.getStatus() != null
-                                        && trip.getStatus() == TripStatus.PENDING
-                        )
-                        .count();
+
 
         long cancelledCount =
                 monthlyTrips.stream()
@@ -651,9 +717,7 @@ public class DashboardView {
                         )
                         .count();
 
-        pendingTripsLabel.setText(
-                String.valueOf(pendingCount)
-        );
+
 
         cancelledTripsLabel.setText(
                 String.valueOf(cancelledCount)

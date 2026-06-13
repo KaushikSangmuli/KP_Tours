@@ -13,7 +13,6 @@ public class DashboardHeaderView {
     public static final Label totalSellLabel = summaryValue("₹ 0.00");
     public static final Label totalPurchaseLabel = summaryValue("₹ 0.00");
     public static final Label totalProfitLabel = summaryValue("₹ 0.00");
-    public static final Label pendingTripsLabel = summaryValue("0");
     public static final Label cancelledTripsLabel = summaryValue("0");
 
     private DashboardHeaderView() {
@@ -104,12 +103,6 @@ public class DashboardHeaderView {
                         totalProfitLabel
                 );
 
-        VBox card5 =
-                DashboardView.summaryCard(
-                        "pending.png",
-                        "Pending",
-                        pendingTripsLabel
-                );
 
         VBox card6 =
                 DashboardView.summaryCard(
@@ -123,7 +116,6 @@ public class DashboardHeaderView {
                 card2,
                 card3,
                 card4,
-                card5,
                 card6
         };
 
@@ -147,7 +139,7 @@ public class DashboardHeaderView {
 
             } else {
 
-                columns = 6;
+                columns = 5;
             }
 
             for (int i = 0; i < columns; i++) {
