@@ -43,7 +43,7 @@ public class DashboardView {
 
     private static final GridPane calendarGrid = new GridPane();
     private static final TableView<Trip> tripTable = new TableView<>();
-    private static VBox calendarRoot;
+    public static VBox calendarRoot;
 
     private static final Label monthLabel = new Label();
     public static final Label monthOverviewLabel = new Label();
@@ -625,9 +625,9 @@ public class DashboardView {
                 new SimpleObjectProperty<>(cell.getValue().getSellAmount())
         );
         name.setPrefWidth(150);
-        sector.setPrefWidth(130);
-        airline.setPrefWidth(150);
-        pnr.setPrefWidth(120);
+        sector.setPrefWidth(120);
+        airline.setPrefWidth(130);
+        pnr.setPrefWidth(110);
         bookedBy.setPrefWidth(100);
         status.setPrefWidth(110);
         sellAmount.setPrefWidth(110);

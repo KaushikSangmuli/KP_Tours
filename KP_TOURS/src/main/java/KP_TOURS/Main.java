@@ -9,6 +9,7 @@ import KP_TOURS.repository.SettingsRepository;
 import KP_TOURS.repository.TripRepository;
 import KP_TOURS.ui.dashboard.DashboardView;
 import KP_TOURS.ui.settings.AppSettings;
+import KP_TOURS.ui.sidebar.SidebarView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -73,7 +74,8 @@ public class Main extends Application {
                 );
 
 
-        DashboardView.attachKeyboard(scene);   // 👈 ADD THIS
+        DashboardView.attachKeyboard(scene);
+        SidebarView.attachShortcuts(scene);
         scene.getStylesheets().add(
                 getClass()
                         .getResource("/css/app.css")

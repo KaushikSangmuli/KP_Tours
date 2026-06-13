@@ -3,22 +3,34 @@ package KP_TOURS.ui.accounts;
 import KP_TOURS.model.Account;
 import KP_TOURS.repository.AccountRepository;
 import KP_TOURS.ui.dashboard.DashboardView;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import java.util.List;
 
+import static KP_TOURS.ui.accounts.AccountsListView.table;
+
 public class AccountView {
 
     private static Account selectedViewAccount;
+    public static TextField nameField;
+    private static Parent cachedView;
 
     public static Parent getView() {
+
+        if (cachedView != null) {
+            return cachedView; // ✅ return early, nameField stays valid
+        }
 
         VBox root = new VBox(22);
         root.setFillWidth(true);
@@ -28,7 +40,7 @@ public class AccountView {
         HBox header = new HBox(12);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        Label title = new Label("A/C Ledger");
+        Label title = new Label("Account");
         title.getStyleClass().add("section-title");
 
         Region spacer = new Region();
@@ -63,10 +75,24 @@ public class AccountView {
         form.setVgap(14);
         form.setMaxWidth(Double.MAX_VALUE);
 
-        TextField nameField = input("Enter account name");
+         nameField = input("Enter account name");
         TextField cityField = input("Enter city");
         TextField phoneField = input("Enter phone number");
         TextField emailField = input("Enter email address");
+
+        Button saveBtn = new Button("Save Account");
+        saveBtn.getStyleClass().add("primary-button");
+
+        Button viewAccountBtn = new Button("View Accounts");
+        viewAccountBtn.getStyleClass().add("secondary-button");
+
+        Button clearBtn = new Button("Clear");
+        clearBtn.getStyleClass().add("secondary-button");
+
+
+        Button showListBtn = new Button("Show List");
+        showListBtn.getStyleClass().add("secondary-button");
+
 
         TextArea addressArea = new TextArea();
         addressArea.setPromptText("Enter full address");
@@ -161,6 +187,85 @@ public class AccountView {
                 selectedViewAccount = newVal;
             }
         });
+// Add this after all fields and buttons are declared, before the form.add() calls
+
+        nameField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                cityField.requestFocus();
+            }
+        });
+
+        cityField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                phoneField.requestFocus();
+            }
+        });
+
+        phoneField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                emailField.requestFocus();
+            }
+        });
+
+        emailField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                groupBox.requestFocus();
+            }
+        });
+
+        groupBox.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                addressArea.requestFocus();
+            }
+        });
+
+        viewAccountBox.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                viewAccountBtn.requestFocus();
+            }
+        });
+
+        viewAccountBtn.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                viewAccountBtn.fire();
+                // After popup closes, return to viewAccountBox
+                Platform.runLater(() -> viewAccountBox.requestFocus());
+            }
+        });
+        addressArea.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                saveBtn.requestFocus();
+            }
+        });
+
+// Save button — Enter triggers confirmation then saves
+        saveBtn.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+                confirm.setTitle("Confirm Save");
+                confirm.setHeaderText("Save Account");
+                confirm.setContentText("Are you sure you want to save this account?");
+
+                confirm.showAndWait().ifPresent(response -> {
+                    if (response == ButtonType.OK) {
+                        saveBtn.fire();
+                    } else {
+                        // ✅ Cancel → back to first field
+                        Platform.runLater(() -> nameField.requestFocus());
+                    }
+                });
+            }
+        });
 
         form.add(label("Name"), 0, 0);
         form.add(nameField, 1, 0);
@@ -207,17 +312,6 @@ public class AccountView {
         HBox actions = new HBox(12);
         actions.setAlignment(Pos.CENTER_RIGHT);
 
-        Button viewAccountBtn = new Button("View Accounts");
-        viewAccountBtn.getStyleClass().add("secondary-button");
-
-        Button clearBtn = new Button("Clear");
-        clearBtn.getStyleClass().add("secondary-button");
-
-        Button saveBtn = new Button("Save Account");
-        saveBtn.getStyleClass().add("primary-button");
-
-        Button showListBtn = new Button("Show List");
-        showListBtn.getStyleClass().add("secondary-button");
 
         clearBtn.setOnAction(e -> {
             nameField.clear();
@@ -241,34 +335,14 @@ public class AccountView {
             }
 
             Account account = new Account();
+            account.setName(nameField.getText().trim());
+            account.setAddress(addressArea.getText().trim());
+            account.setCity(cityField.getText().trim());
+            account.setPhoneNo(phoneField.getText().trim());
+            account.setEmail(emailField.getText().trim());
+            account.setAccountGroup(groupBox.getValue());
 
-            account.setName(
-                    nameField.getText().trim()
-            );
-
-            account.setAddress(
-                    addressArea.getText().trim()
-            );
-
-            account.setCity(
-                    cityField.getText().trim()
-            );
-
-            account.setPhoneNo(
-                    phoneField.getText().trim()
-            );
-
-            account.setEmail(
-                    emailField.getText().trim()
-            );
-
-            account.setAccountGroup(
-                    groupBox.getValue()
-            );
-
-
-            boolean saved =
-                    repository.save(account);
+            boolean saved = repository.save(account);
 
             if (saved) {
 
@@ -279,25 +353,26 @@ public class AccountView {
                 phoneField.clear();
                 emailField.clear();
                 addressArea.clear();
-
-                groupBox.getSelectionModel()
-                        .clearSelection();
-
-                DashboardView.loadScreen(
-                        AccountView.getView()
-                );
-
+                groupBox.getSelectionModel().clearSelection();;
 
             } else {
-
                 alert("Failed to save account");
             }
         });
-        showListBtn.setOnAction(e ->
-                DashboardView.loadScreen(
-                        AccountsListView.getView()
-                )
-        );
+        showListBtn.setOnAction(e -> {
+            DashboardView.loadScreen(AccountsListView.getView());
+            // ✅ Force focus to table after screen loads, not sidebar
+            Platform.runLater(() ->
+                    Platform.runLater(() -> AccountsListView.getFocusTarget().requestFocus())
+            );
+        });
+
+        showListBtn.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                showListBtn.fire();
+            }
+        });
 
         viewAccountBtn.setOnAction(e -> {
 
@@ -337,8 +412,8 @@ public class AccountView {
 
             summaryGrid.getColumnConstraints().add(col);
         }
-
-        return root;
+        cachedView = root;
+        return cachedView;
     }
 
     private static TextField input(String prompt) {
@@ -406,5 +481,16 @@ public class AccountView {
         return value == null || value.isBlank()
                 ? "-"
                 : value;
+    }
+    // In each screen e.g. AccountView.java
+    public static javafx.scene.Node getFocusTarget() {
+        return nameField; // just return the node, don't call requestFocus here
+    }
+
+
+    public static void focusNameField() {
+        if (nameField != null) {
+            Platform.runLater(() -> nameField.requestFocus());
+        }
     }
 }
