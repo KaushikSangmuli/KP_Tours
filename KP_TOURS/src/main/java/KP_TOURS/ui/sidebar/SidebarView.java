@@ -216,9 +216,9 @@ public class SidebarView {
         ledgerBtn.setOnAction(e -> {
             setActive(ledgerBtn);
             DashboardView.loadScreen(AccountLedgerView.getView());
-//            Platform.runLater(() ->
-//                    Platform.runLater(() -> AccountLedgerView.getFocusTarget().requestFocus())
-//            );
+            Platform.runLater(() ->
+                    Platform.runLater(() -> AccountLedgerView.getFocusTarget().requestFocus())
+            );
         });
 
         purchaseSalesBtn.setOnAction(e -> {
@@ -367,7 +367,7 @@ public class SidebarView {
         javafx.scene.Node target = switch (label) {
             case "Calendar"               -> DashboardView.calendarRoot;
             case "Accounts"               -> AccountView.getFocusTarget();
-//            case "A/C Ledger"             -> AccountLedgerView.getFocusTarget();
+            case "A/C Ledger"             -> AccountLedgerView.getFocusTarget();
 //            case "Payables & Receivables" -> PayReceiveView.getFocusTarget();
 //            case "Purchases & Sales"      -> PurchaseSalesView.getFocusTarget();
             default                       -> null;

@@ -29,7 +29,7 @@ public class AccountView {
     public static Parent getView() {
 
         if (cachedView != null) {
-            return cachedView; // ✅ return early, nameField stays valid
+            return cachedView;
         }
 
         VBox root = new VBox(22);
@@ -47,10 +47,10 @@ public class AccountView {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         header.getChildren().addAll(title, spacer);
+
         VBox card = new VBox(20);
         card.getStyleClass().add("premium-panel");
         card.setMaxWidth(Double.MAX_VALUE);
-
 
         GridPane summaryGrid = new GridPane();
         summaryGrid.setHgap(16);
@@ -75,24 +75,20 @@ public class AccountView {
         form.setVgap(14);
         form.setMaxWidth(Double.MAX_VALUE);
 
-         nameField = input("Enter account name");
-        TextField cityField = input("Enter city");
-        TextField phoneField = input("Enter phone number");
-        TextField emailField = input("Enter email address");
+        nameField = input("Enter account name");
+        TextField cityField   = input("Enter city");
+        TextField phoneField  = input("Enter phone number");
+        TextField emailField  = input("Enter email address");
 
-        Button saveBtn = new Button("Save Account");
-        saveBtn.getStyleClass().add("primary-button");
-
+        Button saveBtn        = new Button("Save Account");
         Button viewAccountBtn = new Button("View Accounts");
+        Button clearBtn       = new Button("Clear");
+        Button showListBtn    = new Button("Show List");
+
+        saveBtn.getStyleClass().add("primary-button");
         viewAccountBtn.getStyleClass().add("secondary-button");
-
-        Button clearBtn = new Button("Clear");
         clearBtn.getStyleClass().add("secondary-button");
-
-
-        Button showListBtn = new Button("Show List");
         showListBtn.getStyleClass().add("secondary-button");
-
 
         TextArea addressArea = new TextArea();
         addressArea.setPromptText("Enter full address");
@@ -100,95 +96,140 @@ public class AccountView {
         addressArea.getStyleClass().add("premium-text-area");
 
         ComboBox<String> groupBox = new ComboBox<>(
-                FXCollections.observableArrayList(
-                        "Creditor",
-                        "Debtor"
-                )
+                FXCollections.observableArrayList("Creditor", "Debtor")
         );
         groupBox.setPromptText("Select account group");
         groupBox.setMaxWidth(Double.MAX_VALUE);
         groupBox.getStyleClass().add("premium-combo");
 
-        ComboBox<Account> viewAccountBox = new ComboBox<>();
-        viewAccountBox.setPromptText("Type account name to view");
-        viewAccountBox.setMaxWidth(Double.MAX_VALUE);
-        viewAccountBox.getStyleClass().add("premium-combo");
+        // ✅ Load all accounts upfront
+        List<Account> allAccounts = repository.findAll();
 
-        viewAccountBox.setEditable(true);
+        // ✅ Custom searchable dropdown using TextField + ListView
+        TextField viewSearchField = new TextField();
+        viewSearchField.setPromptText("Type account name to view");
+        viewSearchField.setMaxWidth(Double.MAX_VALUE);
+        viewSearchField.getStyleClass().add("premium-input");
 
-        viewAccountBox.setConverter(new StringConverter<Account>() {
+        ListView<Account> viewDropdown = new ListView<>();
+        viewDropdown.setMaxHeight(150);
+        viewDropdown.setVisible(false);
+        viewDropdown.setManaged(false);
+        viewDropdown.getStyleClass().add("premium-table");
 
-            @Override
-            public String toString(Account account) {
-
-                if (account == null) {
-                    return "";
-                }
-
-                return account.getName()
-                        + " - "
-                        + safe(account.getPhoneNo());
-            }
-
-            @Override
-            public Account fromString(String string) {
-                return selectedViewAccount;
-            }
-        });
-
-        viewAccountBox.setCellFactory(listView -> new ListCell<>() {
+        viewDropdown.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(Account account, boolean empty) {
                 super.updateItem(account, empty);
-
-                if (empty || account == null) {
-                    setText(null);
-                } else {
-                    setText(account.getName() + " - " + account.getPhoneNo());
-                }
+                setText(empty || account == null
+                        ? null
+                        : account.getName() + " - " + safe(account.getPhoneNo()));
             }
         });
 
-        viewAccountBox.setButtonCell(new ListCell<>() {
-            @Override
-            protected void updateItem(Account account, boolean empty) {
-                super.updateItem(account, empty);
+        viewDropdown.setItems(FXCollections.observableArrayList(allAccounts));
 
-                if (empty || account == null) {
-                    setText(null);
-                } else {
-                    setText(account.getName() + " - " + account.getPhoneNo());
-                }
-            }
-        });
+        // ✅ Filter as user types
+        viewSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
 
-        viewAccountBox.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
+            Account selected = selectedViewAccount;
+            if (selected != null && selected.getName().equals(newVal)) return;
 
             if (newVal == null || newVal.isBlank()) {
-                viewAccountBox.getItems().clear();
-                selectedViewAccount = null;
-                return;
+                viewDropdown.setItems(FXCollections.observableArrayList(allAccounts));
+            } else {
+                List<Account> filtered = allAccounts.stream()
+                        .filter(a -> a.getName().toLowerCase()
+                                .contains(newVal.toLowerCase()))
+                        .toList();
+                viewDropdown.setItems(FXCollections.observableArrayList(filtered));
             }
 
+            boolean hasItems = !viewDropdown.getItems().isEmpty();
+            viewDropdown.setVisible(hasItems);
+            viewDropdown.setManaged(hasItems);
+        });
 
-            List<Account> accounts =
-                    repository.searchByName(newVal);
+        // ✅ Keyboard navigation in search field
+        viewSearchField.setOnKeyPressed(e -> {
+            switch (e.getCode()) {
 
-            viewAccountBox.getItems().setAll(accounts);
+                case DOWN -> {
+                    e.consume();
+                    viewDropdown.setVisible(true);
+                    viewDropdown.setManaged(true);
+                    int cur = viewDropdown.getSelectionModel().getSelectedIndex();
+                    if (cur < viewDropdown.getItems().size() - 1) {
+                        viewDropdown.getSelectionModel().select(cur + 1);
+                    } else {
+                        viewDropdown.getSelectionModel().selectFirst();
+                    }
+                    viewDropdown.scrollTo(viewDropdown.getSelectionModel().getSelectedIndex());
+                }
 
-            if (!accounts.isEmpty()) {
-                viewAccountBox.show();
+                case UP -> {
+                    e.consume();
+                    int cur = viewDropdown.getSelectionModel().getSelectedIndex();
+                    if (cur > 0) {
+                        viewDropdown.getSelectionModel().select(cur - 1);
+                    } else {
+                        viewDropdown.getSelectionModel().selectLast();
+                    }
+                    viewDropdown.scrollTo(viewDropdown.getSelectionModel().getSelectedIndex());
+                }
+
+                case ENTER -> {
+                    e.consume();
+                    Account highlighted = viewDropdown.getSelectionModel().getSelectedItem();
+                    if (highlighted != null) {
+                        selectedViewAccount = highlighted;
+                        viewSearchField.setText(highlighted.getName());
+                        viewDropdown.setVisible(false);
+                        viewDropdown.setManaged(false);
+                    }
+                    Platform.runLater(() -> viewAccountBtn.requestFocus());
+                }
+
+                case ESCAPE -> {
+                    e.consume();
+                    viewDropdown.setVisible(false);
+                    viewDropdown.setManaged(false);
+                    viewSearchField.clear();
+                    selectedViewAccount = null;
+                    viewDropdown.setItems(FXCollections.observableArrayList(allAccounts));
+                    Platform.runLater(() -> nameField.requestFocus());
+                }
             }
         });
 
-        viewAccountBox.valueProperty().addListener((obs, oldVal, newVal) -> {
-
-            if (newVal != null) {
-                selectedViewAccount = newVal;
+        // ✅ Click to select from dropdown
+        viewDropdown.setOnMouseClicked(e -> {
+            Account selected = viewDropdown.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                selectedViewAccount = selected;
+                viewSearchField.setText(selected.getName());
+                viewDropdown.setVisible(false);
+                viewDropdown.setManaged(false);
+                Platform.runLater(() -> viewAccountBtn.requestFocus());
             }
         });
-// Add this after all fields and buttons are declared, before the form.add() calls
 
+        // ✅ Hide dropdown when focus leaves
+        viewSearchField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (!isFocused && !viewDropdown.isFocused()) {
+                Platform.runLater(() -> {
+                    if (!viewDropdown.isFocused()) {
+                        viewDropdown.setVisible(false);
+                        viewDropdown.setManaged(false);
+                    }
+                });
+            }
+        });
+
+        VBox viewAccountWrapper = new VBox(0, viewSearchField, viewDropdown);
+        viewAccountWrapper.setMaxWidth(Double.MAX_VALUE);
+
+        // ✅ Enter key navigation between fields
         nameField.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 e.consume();
@@ -224,21 +265,6 @@ public class AccountView {
             }
         });
 
-        viewAccountBox.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                e.consume();
-                viewAccountBtn.requestFocus();
-            }
-        });
-
-        viewAccountBtn.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                e.consume();
-                viewAccountBtn.fire();
-                // After popup closes, return to viewAccountBox
-                Platform.runLater(() -> viewAccountBox.requestFocus());
-            }
-        });
         addressArea.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 e.consume();
@@ -246,7 +272,14 @@ public class AccountView {
             }
         });
 
-// Save button — Enter triggers confirmation then saves
+        viewAccountBtn.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                viewAccountBtn.fire();
+                Platform.runLater(() -> viewSearchField.requestFocus());
+            }
+        });
+
         saveBtn.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 e.consume();
@@ -260,59 +293,20 @@ public class AccountView {
                     if (response == ButtonType.OK) {
                         saveBtn.fire();
                     } else {
-                        // ✅ Cancel → back to first field
                         Platform.runLater(() -> nameField.requestFocus());
                     }
                 });
             }
         });
 
-        form.add(label("Name"), 0, 0);
-        form.add(nameField, 1, 0);
+        showListBtn.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                showListBtn.fire();
+            }
+        });
 
-        form.add(label("City"), 2, 0);
-        form.add(cityField, 3, 0);
-
-        form.add(label("Phone No"), 0, 1);
-        form.add(phoneField, 1, 1);
-
-        form.add(label("Email"), 2, 1);
-        form.add(emailField, 3, 1);
-
-        form.add(label("Account Group"), 0, 2);
-        form.add(groupBox, 1, 2);
-
-        form.add(label("View Account"), 2, 2);
-        form.add(viewAccountBox, 3, 2);
-
-        form.add(label("Address"), 0, 3);
-        form.add(addressArea, 1, 3, 3, 1);
-
-        ColumnConstraints labelCol1 = new ColumnConstraints();
-        labelCol1.setMinWidth(110);
-
-        ColumnConstraints fieldCol1 = new ColumnConstraints();
-        fieldCol1.setPercentWidth(40);
-        fieldCol1.setHgrow(Priority.ALWAYS);
-
-        ColumnConstraints labelCol2 = new ColumnConstraints();
-        labelCol2.setMinWidth(110);
-
-        ColumnConstraints fieldCol2 = new ColumnConstraints();
-        fieldCol2.setPercentWidth(40);
-        fieldCol2.setHgrow(Priority.ALWAYS);
-
-        form.getColumnConstraints().addAll(
-                labelCol1,
-                fieldCol1,
-                labelCol2,
-                fieldCol2
-        );
-
-        HBox actions = new HBox(12);
-        actions.setAlignment(Pos.CENTER_RIGHT);
-
-
+        // ✅ Button actions
         clearBtn.setOnAction(e -> {
             nameField.clear();
             cityField.clear();
@@ -345,73 +339,75 @@ public class AccountView {
             boolean saved = repository.save(account);
 
             if (saved) {
-
                 alert("Account saved successfully");
-
                 nameField.clear();
                 cityField.clear();
                 phoneField.clear();
                 emailField.clear();
                 addressArea.clear();
-                groupBox.getSelectionModel().clearSelection();;
-
+                groupBox.getSelectionModel().clearSelection();
             } else {
                 alert("Failed to save account");
             }
         });
+
         showListBtn.setOnAction(e -> {
             DashboardView.loadScreen(AccountsListView.getView());
-            // ✅ Force focus to table after screen loads, not sidebar
             Platform.runLater(() ->
                     Platform.runLater(() -> AccountsListView.getFocusTarget().requestFocus())
             );
         });
 
-        showListBtn.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                e.consume();
-                showListBtn.fire();
-            }
-        });
-
         viewAccountBtn.setOnAction(e -> {
-
             if (selectedViewAccount == null) {
                 alert("Please select account from dropdown");
                 return;
             }
-
             showAccountDetails(selectedViewAccount);
         });
 
-        actions.getChildren().addAll(
-                viewAccountBtn,
-                showListBtn,
-                clearBtn,
-                saveBtn
-        );
+        // ✅ Form layout
+        form.add(label("Name"),          0, 0); form.add(nameField,          1, 0);
+        form.add(label("City"),          2, 0); form.add(cityField,          3, 0);
+        form.add(label("Phone No"),      0, 1); form.add(phoneField,         1, 1);
+        form.add(label("Email"),         2, 1); form.add(emailField,         3, 1);
+        form.add(label("Account Group"), 0, 2); form.add(groupBox,           1, 2);
+        form.add(label("View Account"),  2, 2); form.add(viewAccountWrapper, 3, 2);
+        form.add(label("Address"),       0, 3); form.add(addressArea,        1, 3, 3, 1);
 
-        card.getChildren().addAll(
-                formTitle,
-                formSubtitle,
-                form,
-                actions
-        );
+        ColumnConstraints labelCol1 = new ColumnConstraints();
+        labelCol1.setMinWidth(110);
 
+        ColumnConstraints fieldCol1 = new ColumnConstraints();
+        fieldCol1.setPercentWidth(40);
+        fieldCol1.setHgrow(Priority.ALWAYS);
+
+        ColumnConstraints labelCol2 = new ColumnConstraints();
+        labelCol2.setMinWidth(110);
+
+        ColumnConstraints fieldCol2 = new ColumnConstraints();
+        fieldCol2.setPercentWidth(40);
+        fieldCol2.setHgrow(Priority.ALWAYS);
+
+        form.getColumnConstraints().addAll(labelCol1, fieldCol1, labelCol2, fieldCol2);
+
+        HBox actions = new HBox(12);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.getChildren().addAll(viewAccountBtn, showListBtn, clearBtn, saveBtn);
+
+        card.getChildren().addAll(formTitle, formSubtitle, form, actions);
         VBox.setVgrow(card, Priority.ALWAYS);
 
         root.getChildren().addAll(header, card, summaryGrid);
 
         for (int i = 0; i < 4; i++) {
-
             ColumnConstraints col = new ColumnConstraints();
-
             col.setPercentWidth(25);
             col.setHgrow(Priority.ALWAYS);
             col.setFillWidth(true);
-
             summaryGrid.getColumnConstraints().add(col);
         }
+
         cachedView = root;
         return cachedView;
     }
