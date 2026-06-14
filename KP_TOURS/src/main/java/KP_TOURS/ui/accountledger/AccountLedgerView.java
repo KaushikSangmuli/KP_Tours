@@ -14,6 +14,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.Popup;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +26,7 @@ public class AccountLedgerView {
 
     private TextField accountSearchField;
     private ListView<Account> accountDropdown;
+    private Popup dropdownPopup;
     private HBox fromDateField;
     private HBox toDateField;
     private DatePicker fromDatePicker;
@@ -89,16 +91,16 @@ public class AccountLedgerView {
 
         List<Account> allAccounts = accountRepository.findAll();
 
+        // ✅ Search field
         accountSearchField = new TextField();
         accountSearchField.setPromptText("Type to search account...");
         accountSearchField.setPrefWidth(280);
         accountSearchField.getStyleClass().add("premium-input");
 
+        // ✅ Dropdown as Popup
         accountDropdown = new ListView<>();
-        accountDropdown.setMaxHeight(150);
         accountDropdown.setPrefWidth(280);
-        accountDropdown.setVisible(false);
-        accountDropdown.setManaged(false);
+        accountDropdown.setPrefHeight(150);
         accountDropdown.getStyleClass().add("premium-table");
 
         accountDropdown.setCellFactory(lv -> new ListCell<>() {
@@ -113,10 +115,33 @@ public class AccountLedgerView {
 
         accountDropdown.setItems(FXCollections.observableArrayList(allAccounts));
 
+        dropdownPopup = new Popup();
+        dropdownPopup.setAutoHide(true);
+        dropdownPopup.setHideOnEscape(true);
+        dropdownPopup.getContent().add(accountDropdown);
+
+        // ✅ Show popup below search field
+        Runnable showPopup = () -> {
+            if (accountDropdown.getItems().isEmpty()) return;
+            javafx.geometry.Bounds bounds =
+                    accountSearchField.localToScreen(
+                            accountSearchField.getBoundsInLocal());
+            if (bounds != null && accountSearchField.getScene() != null) {
+                dropdownPopup.show(
+                        accountSearchField,
+                        bounds.getMinX(),
+                        bounds.getMaxY() + 2
+                );
+            }
+        };
+
+        Runnable hidePopup = () -> dropdownPopup.hide();
+
         // ✅ Filter as user types
         accountSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
 
-            if (selectedAccount != null && selectedAccount.getName().equals(newVal)) return;
+            if (selectedAccount != null
+                    && selectedAccount.getName().equals(newVal)) return;
 
             if (newVal == null || newVal.isBlank()) {
                 accountDropdown.setItems(
@@ -130,9 +155,11 @@ public class AccountLedgerView {
                         FXCollections.observableArrayList(filtered));
             }
 
-            boolean hasItems = !accountDropdown.getItems().isEmpty();
-            accountDropdown.setVisible(hasItems);
-            accountDropdown.setManaged(hasItems);
+            if (!accountDropdown.getItems().isEmpty()) {
+                showPopup.run();
+            } else {
+                hidePopup.run();
+            }
         });
 
         // ✅ Keyboard navigation
@@ -141,47 +168,54 @@ public class AccountLedgerView {
 
                 case DOWN -> {
                     e.consume();
-                    accountDropdown.setVisible(true);
-                    accountDropdown.setManaged(true);
-                    int cur = accountDropdown.getSelectionModel().getSelectedIndex();
+                    showPopup.run();
+                    int cur = accountDropdown.getSelectionModel()
+                            .getSelectedIndex();
                     if (cur < accountDropdown.getItems().size() - 1) {
                         accountDropdown.getSelectionModel().select(cur + 1);
                     } else {
                         accountDropdown.getSelectionModel().selectFirst();
                     }
                     accountDropdown.scrollTo(
-                            accountDropdown.getSelectionModel().getSelectedIndex());
+                            accountDropdown.getSelectionModel()
+                                    .getSelectedIndex());
                 }
 
                 case UP -> {
                     e.consume();
-                    int cur = accountDropdown.getSelectionModel().getSelectedIndex();
+                    int cur = accountDropdown.getSelectionModel()
+                            .getSelectedIndex();
                     if (cur > 0) {
                         accountDropdown.getSelectionModel().select(cur - 1);
                     } else {
                         accountDropdown.getSelectionModel().selectLast();
                     }
                     accountDropdown.scrollTo(
-                            accountDropdown.getSelectionModel().getSelectedIndex());
+                            accountDropdown.getSelectionModel()
+                                    .getSelectedIndex());
                 }
 
                 case ENTER -> {
                     e.consume();
                     Account highlighted =
                             accountDropdown.getSelectionModel().getSelectedItem();
+
+                    if (highlighted == null && !accountDropdown.getItems().isEmpty()) {
+                        highlighted = accountDropdown.getItems().get(0);
+                    }
+
                     if (highlighted != null) {
                         selectedAccount = highlighted;
                         accountSearchField.setText(highlighted.getName());
-                        accountDropdown.setVisible(false);
-                        accountDropdown.setManaged(false);
+                        dropdownPopup.hide();
                     }
+
                     focusDateField(fromDateField);
                 }
 
                 case ESCAPE -> {
                     e.consume();
-                    accountDropdown.setVisible(false);
-                    accountDropdown.setManaged(false);
+                    hidePopup.run();
                     accountSearchField.clear();
                     selectedAccount = null;
                     accountDropdown.setItems(
@@ -190,33 +224,43 @@ public class AccountLedgerView {
             }
         });
 
-        // ✅ Click to select
+        // ✅ Click to select from dropdown
         accountDropdown.setOnMouseClicked(e -> {
-            Account selected = accountDropdown.getSelectionModel().getSelectedItem();
+            Account selected =
+                    accountDropdown.getSelectionModel().getSelectedItem();
             if (selected != null) {
                 selectedAccount = selected;
                 accountSearchField.setText(selected.getName());
-                accountDropdown.setVisible(false);
-                accountDropdown.setManaged(false);
+                hidePopup.run();
                 focusDateField(fromDateField);
             }
         });
 
-        // ✅ Hide when focus leaves
-        accountSearchField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
-            if (!isFocused) {
-                Platform.runLater(() -> {
-                    if (!accountDropdown.isFocused()) {
-                        accountDropdown.setVisible(false);
-                        accountDropdown.setManaged(false);
-                    }
-                });
+        accountDropdown.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                e.consume();
+                Account highlighted =
+                        accountDropdown.getSelectionModel().getSelectedItem();
+                if (highlighted != null) {
+                    selectedAccount = highlighted;
+                    accountSearchField.setText(highlighted.getName());
+                    dropdownPopup.hide();
+                    focusDateField(fromDateField);
+                }
             }
         });
 
-        // ✅ VBox wrapper — dropdown appears below search field
-        VBox accountWrapper = new VBox(0, accountSearchField, accountDropdown);
-        accountWrapper.setPrefWidth(280);
+        // ✅ Hide popup when focus leaves search field
+        accountSearchField.focusedProperty().addListener(
+                (obs, wasFocused, isFocused) -> {
+                    if (!isFocused) {
+                        Platform.runLater(() -> {
+                            if (!dropdownPopup.isFocused()) {
+                                hidePopup.run();
+                            }
+                        });
+                    }
+                });
 
         fromDatePicker = new DatePicker(LocalDate.now().minusMonths(1));
         toDatePicker   = new DatePicker(LocalDate.now());
@@ -242,9 +286,9 @@ public class AccountLedgerView {
             }
         });
 
-        // ✅ accountWrapper instead of accountSearchField directly
+        // ✅ No wrapper needed — Popup floats independently
         row.getChildren().addAll(
-                new Label("Account"), accountWrapper,
+                new Label("Account"), accountSearchField,
                 new Label("From"),    fromDateField,
                 new Label("To"),      toDateField,
                 outstandingLabel,
@@ -499,7 +543,8 @@ public class AccountLedgerView {
         dateCol.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getDate()));
 
-        TableColumn<LedgerRow, String> particularsCol = new TableColumn<>("Particulars");
+        TableColumn<LedgerRow, String> particularsCol =
+                new TableColumn<>("Particulars");
         particularsCol.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getParticulars()));
 
@@ -515,11 +560,13 @@ public class AccountLedgerView {
         remarkCol.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getRemark()));
 
-        TableColumn<LedgerRow, String> voucherTypeCol = new TableColumn<>("Voucher Type");
+        TableColumn<LedgerRow, String> voucherTypeCol =
+                new TableColumn<>("Voucher Type");
         voucherTypeCol.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getVoucherType()));
 
-        TableColumn<LedgerRow, String> voucherNoCol = new TableColumn<>("Voucher No");
+        TableColumn<LedgerRow, String> voucherNoCol =
+                new TableColumn<>("Voucher No");
         voucherNoCol.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getVoucherNo()));
 
