@@ -26,6 +26,17 @@ public class TripRepository {
             return false;
         }
     }
+    public boolean deleteByUuid(String uuid) {
+        String sql = "DELETE FROM trips WHERE uuid = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     public boolean save(Connection conn, Trip trip) {
 

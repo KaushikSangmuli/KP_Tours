@@ -3,17 +3,66 @@ package KP_TOURS.repository;
 import KP_TOURS.db.DBConnection;
 import KP_TOURS.model.Account;
 import KP_TOURS.util.LoggerUtil;
-import java.util.ArrayList;
-import java.util.List;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.time.LocalDateTime;
-import java.util.UUID;
 import java.sql.ResultSet;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class AccountRepository {
+
+    // ── Preloaded cache for zero-cost UUID lookups ────────────────────────────
+    // Call loadCache() once when you need it (e.g. before rendering a table).
+    // The cache is NOT auto-refreshed — call loadCache() again after saves/updates/deletes.
+
+    private Map<String, Account> uuidCache = null;
+
+    /** Preload all accounts into memory. Call once before bulk UUID lookups. */
+    public void loadCache() {
+        List<Account> all = findAll();
+        uuidCache = new HashMap<>(all.size() * 2);
+        for (Account a : all) {
+            uuidCache.put(a.getUuid(), a);
+        }
+    }
+
+    /** Clear the cache (e.g. after a save/update/delete). */
+    public void clearCache() {
+        uuidCache = null;
+    }
+
+    /**
+     * Find account by UUID.
+     * Uses in-memory cache if loadCache() was called, otherwise hits the DB once.
+     */
+    public Account findByUuid(String uuid) {
+        if (uuid == null || uuid.isBlank()) return null;
+
+        // Use cache if available
+        if (uuidCache != null) {
+            return uuidCache.get(uuid);
+        }
+
+        // Fallback: single DB query
+        String sql = "SELECT * FROM accounts WHERE uuid = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapAccount(rs);
+            }
+        } catch (Exception e) {
+            LoggerUtil.logError(e, "Failed to find account by UUID");
+        }
+        return null;
+    }
+
+    // ── All existing methods below — unchanged ────────────────────────────────
 
     public boolean save(Account account) {
 
@@ -138,7 +187,6 @@ public class AccountRepository {
         return accounts;
     }
 
-
     public List<Account> findAllDebtors() {
 
         List<Account> accounts = new ArrayList<>();
@@ -192,6 +240,7 @@ public class AccountRepository {
 
         return accounts;
     }
+
     public List<Account> searchByName(String keyword) {
 
         List<Account> accounts = new ArrayList<>();
@@ -265,6 +314,7 @@ public class AccountRepository {
 
         return account;
     }
+
     private String generateAccountNo() {
 
         String sql =
@@ -353,5 +403,4 @@ public class AccountRepository {
             return false;
         }
     }
-
 }

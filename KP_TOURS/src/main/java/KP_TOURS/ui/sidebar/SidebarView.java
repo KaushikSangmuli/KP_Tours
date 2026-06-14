@@ -26,6 +26,8 @@ import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
 
+import static KP_TOURS.ui.purchasesales.PurchaseSalesView.requestFocusSafely;
+
 public class SidebarView {
 
     private static Button activeButton;
@@ -224,9 +226,7 @@ public class SidebarView {
         purchaseSalesBtn.setOnAction(e -> {
             setActive(purchaseSalesBtn);
             DashboardView.loadScreen(PurchaseSalesView.getView());
-//            Platform.runLater(() ->
-//                    Platform.runLater(() -> PurchaseSalesView.getFocusTarget().requestFocus())
-//            );
+            requestFocusSafely(PurchaseSalesView.getFocusTarget());
         });
 
         payRecBtn.setOnAction(e -> {
@@ -369,7 +369,7 @@ public class SidebarView {
             case "Accounts"               -> AccountView.getFocusTarget();
             case "A/C Ledger"             -> AccountLedgerView.getFocusTarget();
 //            case "Payables & Receivables" -> PayReceiveView.getFocusTarget();
-//            case "Purchases & Sales"      -> PurchaseSalesView.getFocusTarget();
+            case "Purchases & Sales"      -> PurchaseSalesView.getFocusTarget();
             default                       -> null;
         };
 
