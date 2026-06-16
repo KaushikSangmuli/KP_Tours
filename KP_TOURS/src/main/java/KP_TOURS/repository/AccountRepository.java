@@ -39,6 +39,15 @@ public class AccountRepository {
      * Find account by UUID.
      * Uses in-memory cache if loadCache() was called, otherwise hits the DB once.
      */
+
+    // ✅ Load all accounts as UUID→Account map for efficient bulk lookups
+    public java.util.Map<String, Account> findAllAsMap() {
+        java.util.Map<String, Account> map = new java.util.HashMap<>();
+        for (Account account : findAll()) {
+            map.put(account.getUuid(), account);
+        }
+        return map;
+    }
     public Account findByUuid(String uuid) {
         if (uuid == null || uuid.isBlank()) return null;
 

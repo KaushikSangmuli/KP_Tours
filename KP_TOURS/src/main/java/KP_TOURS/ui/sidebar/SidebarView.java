@@ -2,6 +2,7 @@ package KP_TOURS.ui.sidebar;
 
 import KP_TOURS.ui.accountledger.AccountLedgerView;
 import KP_TOURS.ui.accounts.AccountView;
+import KP_TOURS.ui.creditnotes.CreditNotesView;
 import KP_TOURS.ui.dashboard.DashboardView;
 import KP_TOURS.ui.paymentsreceive.PayReceiveView;
 import KP_TOURS.ui.purchasesales.PurchaseSalesView;
@@ -240,7 +241,10 @@ public class SidebarView {
 // these have no focus target, keep as is
         creditNotesBtn.setOnAction(e -> {
             setActive(creditNotesBtn);
-            DashboardView.loadPlaceholderPage("Credit Notes");
+            DashboardView.loadScreen(CreditNotesView.getView());
+            Platform.runLater(() ->
+                    Platform.runLater(() -> CreditNotesView.getFocusTarget().requestFocus())
+            );
         });
 
         trialBalanceBtn.setOnAction(e -> {

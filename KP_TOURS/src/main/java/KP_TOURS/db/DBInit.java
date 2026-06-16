@@ -173,6 +173,40 @@ public class DBInit {
                         ");";
 
 
+        String creditNotesTable =
+                "CREATE TABLE IF NOT EXISTS credit_notes (" +
+                        "uuid TEXT PRIMARY KEY," +
+                        "credit_note_no TEXT UNIQUE NOT NULL," +
+                        "entry_date TEXT NOT NULL," +
+                        "purchase_sales_uuid TEXT," +
+                        "bill_no TEXT," +
+                        "bill_date TEXT," +
+                        "customer_uuid TEXT," +
+                        "creditor_uuid TEXT," +
+                        "amount REAL DEFAULT 0," +
+                        "bank_refund REAL DEFAULT 0," +
+                        "party_refund REAL DEFAULT 0," +
+                        "diff REAL DEFAULT 0," +
+                        "ticket_no TEXT," +
+                        "remark TEXT," +
+                        "particulars TEXT," +
+                        "payment_mode TEXT," +
+                        "status TEXT DEFAULT 'ACTIVE'," +
+                        "created_at TEXT," +
+                        "updated_at TEXT," +
+                        "qty INTEGER DEFAULT 1," +
+                        "rate REAL DEFAULT 0," +
+                        "purchase_amount REAL DEFAULT 0," +
+                        ");";
+
+        String idxCreditNotesBillNo =
+                "CREATE INDEX IF NOT EXISTS idx_credit_notes_bill_no " +
+                        "ON credit_notes(bill_no);";
+
+        String idxCreditNotesCustomer =
+                "CREATE INDEX IF NOT EXISTS idx_credit_notes_customer " +
+                        "ON credit_notes(customer_uuid);";
+
 
 
         String idxPurchaseSalesDate =
@@ -237,6 +271,7 @@ public class DBInit {
 
 
             stmt.execute(payReceiveTable);
+            addColumnIfNotExists(stmt, "pay_receive", "status", "TEXT DEFAULT 'ACTIVE'");
             stmt.execute(payReceiveBillAdjustmentTable);
             stmt.execute(documentsTable);
             stmt.execute(accountsTable);
@@ -254,6 +289,9 @@ public class DBInit {
             stmt.execute(idxPurchaseSalesBillNo);
             stmt.execute(idxPurchaseSalesCustomer);
             stmt.execute(idxPurchaseSalesTrip);
+            stmt.execute(creditNotesTable);
+            stmt.execute(idxCreditNotesBillNo);
+            stmt.execute(idxCreditNotesCustomer);
 
             LoggerUtil.logInfo("Database initialized successfully");
 

@@ -5,7 +5,7 @@
 
 .premium-header {
     -fx-padding: 28 34 24 34;
-    -fx-background-color: linear-gradient(to right, #111d8f, #243fd6);
+    -fx-background-color: #ffffff;
 }
 .trip-form-scroll {
     -fx-background-color: white;
@@ -315,10 +315,9 @@
 /* =========================================================
    SIDEBAR
 ========================================================= */
-
 .sidebar {
 
-    -fx-background-color: #1E2BB8;
+    -fx-background-color: linear-gradient(to bottom, #1c1f26, #14161b);
 
     -fx-spacing: 8;
 
