@@ -196,7 +196,7 @@ public class DBInit {
                         "updated_at TEXT," +
                         "qty INTEGER DEFAULT 1," +
                         "rate REAL DEFAULT 0," +
-                        "purchase_amount REAL DEFAULT 0," +
+                        "purchase_amount REAL DEFAULT 0" +
                         ");";
 
         String idxCreditNotesBillNo =

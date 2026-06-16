@@ -43,17 +43,23 @@ public class CreditNoteRepository {
     // ── Save credit note + post PayReceive entries ────────────────────
     public boolean save(CreditNote cn) {
 
-        String insertCN = """
-            INSERT INTO credit_notes (
-                uuid, credit_note_no, entry_date,
-                purchase_sales_uuid, bill_no, bill_date,
-                customer_uuid, creditor_uuid,
-                amount, bank_refund, party_refund, diff,
-                ticket_no, remark, particulars, payment_mode,
-                status, created_at, updated_at,qty, rate, purchase_amount
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """;
 
+        String insertCN = """
+    INSERT INTO credit_notes (
+        uuid, credit_note_no, entry_date,
+        purchase_sales_uuid, bill_no, bill_date,
+        customer_uuid, creditor_uuid,
+        amount, bank_refund, party_refund, diff,
+        ticket_no, remark, particulars, payment_mode,
+        status, created_at, updated_at,
+        qty, rate, purchase_amount
+    ) VALUES (
+        ?,?,?,?,?,?,
+        ?,?,?,?,?,?,
+        ?,?,?,?,?,?,
+        ?,?,?,?
+    )
+    """;
         Connection conn = null;
         try {
             conn = DBConnection.getConnection();

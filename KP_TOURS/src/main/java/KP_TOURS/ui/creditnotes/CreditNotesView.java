@@ -197,7 +197,11 @@ public class CreditNotesView {
                 .addListener((obs, o, n) -> updateDiff());
 
         customerBox.valueProperty().addListener((obs, o, customer) -> {
-            clearForm(false);
+            // Don't steal focus back onto the customer box here — it is
+            // already focused while the user is choosing/navigating it.
+            // Re-requesting focus mid-navigation is what caused arrow-key
+            // browsing to feel like it was "jumping" to another item.
+            clearForm(false, false);
             if (customer == null) {
                 selectedCustUuid[0] = null;
                 billNoBox.setItems(FXCollections.emptyObservableList());
@@ -263,7 +267,15 @@ public class CreditNotesView {
                                 String.format("%.2f", ps.getTotalPurchase()));
 
                         updateDiff();
-                        Platform.runLater(() -> bankRefundField.requestFocus());
+                        // NOTE: focus is intentionally NOT forced to
+                        // bankRefundField here. Doing that on every value
+                        // change (including arrow-key highlight changes
+                        // while the dropdown is open) was stealing focus
+                        // out from under the user mid-navigation, which is
+                        // what looked like "the next bill auto-selects
+                        // itself". The Enter-key chain below already moves
+                        // focus to bankRefundField once the user actually
+                        // confirms a Bill No.
                     });
         });
 
@@ -512,23 +524,6 @@ public class CreditNotesView {
         });
         diffCol.setPrefWidth(85); diffCol.setMaxWidth(100);
 
-        TableColumn<CreditNote, String> statusCol = new TableColumn<>("Status");
-        statusCol.setCellValueFactory(d ->
-                new SimpleStringProperty(d.getValue().getStatus()));
-        statusCol.setCellFactory(col -> new TableCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); }
-                else {
-                    setText(item);
-                    setStyle("CANCELLED".equalsIgnoreCase(item)
-                            ? "-fx-text-fill:#dc2626;-fx-font-weight:bold;"
-                            : "-fx-text-fill:#16a34a;-fx-font-weight:bold;");
-                }
-            }
-        });
-        statusCol.setPrefWidth(75); statusCol.setMaxWidth(90);
-
         TableColumn<CreditNote, Void> actionCol = new TableColumn<>("Actions");
         actionCol.setPrefWidth(85); actionCol.setMaxWidth(100);
         actionCol.setCellFactory(col -> new TableCell<>() {
@@ -552,7 +547,7 @@ public class CreditNotesView {
         tv.getColumns().addAll(
                 cnNoCol, dateCol, billNoCol, customerCol, creditorCol,
                 particularsCol, qtyCol, rateCol, purchaseCol, saleCol,
-                bankRefCol, partyRefCol, diffCol, statusCol, actionCol
+                bankRefCol, partyRefCol, diffCol, actionCol
         );
 
         return tv;
@@ -673,6 +668,10 @@ public class CreditNotesView {
 
     // ── Clear form ────────────────────────────────────────────────────
     private void clearForm(boolean clearCustomerToo) {
+        clearForm(clearCustomerToo, true);
+    }
+
+    private void clearForm(boolean clearCustomerToo, boolean refocusCustomer) {
         if (clearCustomerToo) {
             customerBox.setValue(null);
             billNoBox.setItems(FXCollections.emptyObservableList());
@@ -702,7 +701,9 @@ public class CreditNotesView {
         selectedPurchAmt[0] = 0;
         selectedQty[0]      = 1;
         selectedRate[0]     = 0;
-        Platform.runLater(() -> customerBox.requestFocus());
+        if (refocusCustomer) {
+            Platform.runLater(() -> customerBox.requestFocus());
+        }
     }
 
     // ── Diff ──────────────────────────────────────────────────────────
